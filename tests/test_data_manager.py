@@ -3,23 +3,23 @@ import json
 import pytest
 from src.data_manager import load_data, save_data
 
-TEST_CONFIG_PATH = "test_data.json"
+TEST_DATA_PATH = "test_data.json"
 
 
 @pytest.fixture
-def config_file():
+def data_file():
     """Fixture to create/reset a temporary test config file before
     each test."""
 
     # Ensure the test config file starts fresh
-    with open(TEST_CONFIG_PATH, "w") as f:
+    with open(TEST_DATA_PATH, "w") as f:
         json.dump({"dark_mode": False}, f)  # Reset to default
 
-    yield TEST_CONFIG_PATH  # Provide the path for testing
+    yield TEST_DATA_PATH  # Provide the path for testing
 
     # Cleanup after test
-    if os.path.exists(TEST_CONFIG_PATH):
-        os.remove(TEST_CONFIG_PATH)
+    if os.path.exists(TEST_DATA_PATH):
+        os.remove(TEST_DATA_PATH)
 
 
 def test_load_default_config(config_file):

@@ -8,13 +8,13 @@ def load_config(config_path="config.json"):
     Defaults to 'config.json', but allows a custom path for testing.
     """
     if not os.path.exists(config_path):
-        return {"dark_mode": False}  # Default config
+        return {"dark_mode": True}  # Default config
 
     try:
         with open(config_path, "r") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        return {"dark_mode": False}
+        return {"dark_mode": True}
 
 
 def save_config(config, config_path="config.json"):

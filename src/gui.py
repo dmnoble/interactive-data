@@ -8,9 +8,9 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
 )
+from config import load_config, save_config
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette, QColor
-from config import load_config, save_config
 
 
 class MainWindow(QMainWindow):
