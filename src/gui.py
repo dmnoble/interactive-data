@@ -25,10 +25,7 @@ class MainWindow(QMainWindow):
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
         self.theme_selector.addItems(["Light", "Dark"])
-        self.theme_selector.setCurrentText(
-            "Dark" if self.config.get("dark_mode", False) else "Light"
-        )
-        self.update_theme()
+        self.apply_saved_theme()
         self.theme_selector.currentIndexChanged.connect(self.update_theme)
 
         self.search_box = QLineEdit()
@@ -46,6 +43,12 @@ class MainWindow(QMainWindow):
         container = QWidget()
         container.setLayout(self.layout)
         self.setCentralWidget(container)
+
+    def apply_saved_theme(self):
+        self.theme_selector.setCurrentText(
+            "Dark" if self.config.get("dark_mode", False) else "Light"
+        )
+        self.update_theme()
 
     def load_data(self):
         data = self.data_manager.load_data()
