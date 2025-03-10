@@ -96,8 +96,8 @@ class MainWindow(QMainWindow):
         save_config(self.config, self.current_profile)
         self.apply_theme()
         print(
-            f"Theme updated for {self.current_profile} to {self.theme_selector.
-                                                           currentText()}"
+            f"Theme updated for {self.current_profile}"
+            + f" to {self.theme_selector.currentText()}"
         )
 
     def apply_theme(self):

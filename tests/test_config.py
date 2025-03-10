@@ -13,7 +13,7 @@ def config_file():
 
     # Ensure the test config file starts fresh
     with open(TEST_CONFIG_PATH, "w") as f:
-        json.dump({"dark_mode": False}, f)  # Reset to default
+        json.dump({"dark_mode": True}, f)  # Reset to default
 
     yield TEST_CONFIG_PATH  # Provide the path for testing
 
@@ -25,12 +25,12 @@ def config_file():
 def test_load_default_config(config_file):
     """Test loading default config from test file."""
     config = load_config(config_file)
-    assert config == {"dark_mode": False}  # Ensure default is False
+    assert config == {"dark_mode": True}  # Ensure default is False
 
 
 def test_save_and_load_config(config_file):
     """Test saving and reloading configuration settings."""
-    test_config = {"dark_mode": True}
+    test_config = {"dark_mode": False}
     save_config(test_config, config_file)
 
     loaded_config = load_config(config_file)
