@@ -1,0 +1,6 @@
+digraph "classes_InteractiveDataApp" {
+rankdir=BT
+charset="utf-8"
+"src.data_manager.DataManager" [color="black", fontcolor="black", label=<{DataManager|file_path : str<br ALIGN="LEFT"/>|backup_data(backup_path)<br ALIGN="LEFT"/>load_data()<br ALIGN="LEFT"/>save_data(data)<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+"src.gui.MainWindow" [color="black", fontcolor="black", label=<{MainWindow|add_profile_button<br ALIGN="LEFT"/>button<br ALIGN="LEFT"/>config<br ALIGN="LEFT"/>current_profile<br ALIGN="LEFT"/>data_manager<br ALIGN="LEFT"/>layout<br ALIGN="LEFT"/>profile_label<br ALIGN="LEFT"/>profile_selector<br ALIGN="LEFT"/>search_box<br ALIGN="LEFT"/>theme_label<br ALIGN="LEFT"/>theme_selector<br ALIGN="LEFT"/>|apply_theme()<br ALIGN="LEFT"/>create_new_profile()<br ALIGN="LEFT"/>load_data()<br ALIGN="LEFT"/>search_data()<br ALIGN="LEFT"/>switch_profile()<br ALIGN="LEFT"/>update_profile_list()<br ALIGN="LEFT"/>update_theme()<br ALIGN="LEFT"/>}>, shape="record", style="solid"];
+}

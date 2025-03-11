@@ -1,0 +1,98 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Generate Class Diagram (Pyreverse)",
+            "type": "shell",
+            "command": "mkdir diagrams 2>nul & pyreverse -o dot -p InteractiveDataApp src/main.py src/gui.py src/config.py src/data_manager.py & move classes_InteractiveDataApp.dot diagrams\\ & move packages_InteractiveDataApp.dot diagrams\\ & dot -Tsvg diagrams\\classes_InteractiveDataApp.dot -o diagrams\\classes_InteractiveDataApp.svg & dot -Tsvg diagrams\\packages_InteractiveDataApp.dot -o diagrams\\packages_InteractiveDataApp.svg",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "shell": {
+                    "executable": "cmd.exe",
+                    "args": [
+                        "/d",
+                        "/c"
+                    ]
+                }
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate Module Dependency Graph (Pydeps SVG)",
+            "type": "shell",
+            "command": "mkdir diagrams 2>nul & pydeps src/main.py --max-bacon=2 --noshow -T svg -o diagrams\\module_dependencies.svg",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "cmd.exe",
+                    "args": [
+                        "/d",
+                        "/c"
+                    ]
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate Call Graph (Pyan3) (Optional/Needs Python <=3.11)",
+            "type": "shell",
+            "command": "echo \"# NOTE: Pyan3 currently not compatible with Python 3.13. Use Python 3.11 environment.\" && echo \"pyan3 src/main.py src/gui.py src/config.py src/data_manager.py --dot > diagrams/call_graph.dot\"",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate Diagrams and Update Date",
+            "type": "shell",
+            "command": "pyreverse -o dot -p InteractiveDataApp src/*.py & pydeps src/main.py --max-bacon=2 --noshow -T svg -o diagrams/module_dependencies.svg & python update_date.py",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "cmd.exe",
+                    "args": [
+                        "/d",
+                        "/c"
+                    ]
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
