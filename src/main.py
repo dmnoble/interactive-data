@@ -1,8 +1,8 @@
 # main.py
 import sys
 from PyQt5.QtWidgets import QApplication
-from src.gui import MainWindow
-from src.data_manager import DataManager
+from gui import MainWindow
+from data_manager import DataManager
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

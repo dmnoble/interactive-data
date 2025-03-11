@@ -1,6 +1,6 @@
 # gui.py
 import sys
-from src.config import load_config, save_config, get_profiles, DEFAULT_CONFIG
+from config import load_config, save_config, get_profiles, DEFAULT_CONFIG
 from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
