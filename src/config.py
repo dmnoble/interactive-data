@@ -3,6 +3,7 @@ import os
 
 CONFIG_DIR = "config_profiles"  # Directory to store user configs
 DEFAULT_CONFIG = {"dark_mode": True, "filters": {}}
+CONFIG_END = "_config.json"
 
 
 def get_profiles():
@@ -10,15 +11,15 @@ def get_profiles():
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR)
     return [
-        f.replace("_config.json", "")
+        f.replace(CONFIG_END, "")
         for f in os.listdir(CONFIG_DIR)
-        if f.endswith("_config.json")
+        if f.endswith(CONFIG_END)
     ]
 
 
 def get_config_path(profilename):
     """Returns the config file path for a specific profile."""
-    return os.path.join(CONFIG_DIR, f"{profilename}_config.json")
+    return os.path.join(CONFIG_DIR, f"{profilename}{CONFIG_END}")
 
 
 def load_config(profilename="default"):

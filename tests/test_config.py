@@ -1,9 +1,9 @@
 import os
 import json
 import pytest
-from src.config import load_config, save_config
+from src.config import load_config, save_config, get_config_path
 
-TEST_CONFIG_PATH = "test_config.json"
+TEST_FILE = "test_config"
 
 
 @pytest.fixture
@@ -12,20 +12,20 @@ def config_file():
     each test."""
 
     # Ensure the test config file starts fresh
-    with open(TEST_CONFIG_PATH, "w") as f:
+    with open(get_config_path(TEST_FILE), "w") as f:
         json.dump({"dark_mode": True}, f)  # Reset to default
 
-    yield TEST_CONFIG_PATH  # Provide the path for testing
+    yield TEST_FILE  # Provide the path for testing
 
     # Cleanup after test
-    if os.path.exists(TEST_CONFIG_PATH):
-        os.remove(TEST_CONFIG_PATH)
+    if os.path.exists(get_config_path(TEST_FILE)):
+        os.remove(get_config_path(TEST_FILE))
 
 
 def test_load_default_config(config_file):
     """Test loading default config from test file."""
     config = load_config(config_file)
-    assert config == {"dark_mode": True}  # Ensure default is False
+    assert config == {"dark_mode": True}  # Ensure default is True
 
 
 def test_save_and_load_config(config_file):
