@@ -1,7 +1,5 @@
 # Interactive Data Manager
 
-See full documentation [here](docs/README.md).
-
 A Python-based desktop application to manage, view, and interact with user data using a customizable, themeable GUI. Supports dynamic user profiles, light/dark mode, and user-specific preferences.
 
 ## 🚀 Features

@@ -4,6 +4,14 @@ from PyQt5.QtWidgets import QApplication
 from gui import MainWindow
 from data_manager import DataManager
 
+"""
+@todo
+    -   Visuals for data (table, details window, etc)
+    -   Handle situation where there is no previous data
+    -   Figure out how to implement the theme if there is no previous
+        profile
+"""
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
