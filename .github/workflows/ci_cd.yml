@@ -84,7 +84,7 @@ jobs:
 
       - name: Build Executable
         run: |
-          pyinstaller --onefile --name interactive-data main.py
+          python -m PyInstaller --onefile --name interactive-data main.py
 
       - name: Upload Executable as Artifact
         uses: actions/upload-artifact@v4
