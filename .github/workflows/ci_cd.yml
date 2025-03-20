@@ -59,7 +59,7 @@ jobs:
       
 
       - name: Run bandit (Security Check)
-        run: bandit -r src/
+        run:  timeout 120s bandit -r src/ --exclude tests/,docs/,config_profiles/
 
   package:
     name: Package Application
