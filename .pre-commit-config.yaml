@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.12.1  # Update this to the latest version
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0  # Update this to the latest version
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0  # Update this to the latest version
+    hooks:
+      - id: mypy
+        additional_dependencies: [PyQt5-stubs]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5  # Update this to the latest version
+    hooks:
+      - id: bandit
+        args: ["-r", "src"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0  # Update this to the latest version
+    hooks:
+      - id: check-json
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

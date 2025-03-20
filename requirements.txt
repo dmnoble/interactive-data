@@ -2,3 +2,4 @@
 PyQt5
 pytest
 pyinstaller
+pre-commit
