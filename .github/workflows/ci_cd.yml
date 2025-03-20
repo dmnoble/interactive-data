@@ -55,7 +55,8 @@ jobs:
         run: black --check src/
 
       - name: Run mypy (Type Checking)
-        run: PYTHONPATH=src mypy src/
+        run: mypy --config-file mypy.ini src/
+      
 
       - name: Run bandit (Security Check)
         run: bandit -r src/
