@@ -55,7 +55,9 @@ jobs:
         run: black --check src/
 
       - name: Run mypy (Type Checking)
-        run: mypy src/
+        run: |
+          $env:PYTHONPATH = "src"
+          mypy src/
 
       - name: Run bandit (Security Check)
         run: bandit -r src/
