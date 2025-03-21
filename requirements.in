@@ -1,0 +1,9 @@
+pre-commit
+black
+flake8
+mypy
+bandit
+pyinstaller
+pytest
+PyQt5
+PyQt5-stubs
