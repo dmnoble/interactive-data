@@ -1,8 +1,9 @@
 # main.py
 import sys
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from gui import MainWindow
 from data_manager import DataManager
+from logger import setup_logger
 
 """
 @todo
@@ -11,6 +12,17 @@ from data_manager import DataManager
     -   Figure out how to implement the theme if there is no previous
         profile
 """
+
+logger = setup_logger("main")
+
+
+def log_uncaught_exceptions(exctype, value, traceback):
+    logger.error("Uncaught exception", exc_info=(exctype, value, traceback))
+    QMessageBox.critical(None, "Unexpected Error", f"{value}")
+    sys.__excepthook__(exctype, value, traceback)
+
+
+sys.excepthook = log_uncaught_exceptions
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

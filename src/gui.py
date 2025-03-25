@@ -14,6 +14,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette, QColor
+from logger import setup_logger
+
+logger = setup_logger("gui")
 
 
 class MainWindow(QMainWindow):
@@ -56,7 +59,6 @@ class MainWindow(QMainWindow):
         # Check if profiles exist, if not prompt user for a new one
         if not self.profile_selector.count():
             self.create_new_profile()
-            self.update_profile_list()
         self.current_profile = self.profile_selector.currentText()
 
         # Set function call in response to changing profile selection
@@ -171,6 +173,7 @@ class MainWindow(QMainWindow):
                 DEFAULT_CONFIG, new_profile
             )  # Create default config for the new profile
             self.update_profile_list()
+            logger.info(f"New profile created for {new_profile}")
             self.profile_selector.setCurrentText(new_profile)
         else:
             sys.exit()

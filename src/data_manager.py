@@ -1,5 +1,8 @@
 # data_manager.py
 import json
+from logger import setup_logger
+
+logger = setup_logger("data_manager")
 
 
 class DataManager:
@@ -24,6 +27,7 @@ class DataManager:
             with open(self.file_path, "r") as file:
                 return json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
+            logger.exception(f"Config: could not find {self.file_path}.")
             return {}
 
     def save_data(self, data):

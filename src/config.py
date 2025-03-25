@@ -1,5 +1,8 @@
 import json
 import os
+from logger import setup_logger
+
+logger = setup_logger("config")
 
 CONFIG_DIR = "config_profiles"  # Directory to store user configs
 DEFAULT_CONFIG = {"dark_mode": True, "filters": {}}
@@ -37,6 +40,7 @@ def load_config(profilename="default"):
             with open(config_path, "r") as file:
                 return json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
+            logger.exception(f"Config: could not find {config_path}.")
             return DEFAULT_CONFIG
     return DEFAULT_CONFIG
 
