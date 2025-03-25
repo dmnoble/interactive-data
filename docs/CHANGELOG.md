@@ -24,4 +24,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 _This changelog will be updated with each milestone or significant feature/fix._
-

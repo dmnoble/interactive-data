@@ -6,6 +6,7 @@ __pycache__/
 .env
 venv/
 *.log
+logs/
 
 # Ignore test files if needed
 test_config.json

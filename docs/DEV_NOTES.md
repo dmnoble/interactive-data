@@ -45,4 +45,3 @@ A living document to capture insights, lessons learned, and development reflecti
 ---
 
 _Updated regularly as development continues._
-

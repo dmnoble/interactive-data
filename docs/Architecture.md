@@ -10,7 +10,7 @@ _Last updated: {{DATE}}_
 
 ## 📦 Package & Module Relationships
 
-**Diagram:** `packages_InteractiveDataApp.dot`  
+**Diagram:** `packages_InteractiveDataApp.dot`
 **Description:** Visualizes how Python modules and packages are interconnected within the app.
 
 ### 🔍 View:
@@ -32,7 +32,7 @@ dot -Tpng diagrams/packages_InteractiveDataApp.dot -o diagrams/packages_Interact
 
 ## 🧱 Class Relationships
 
-**Diagram:** `classes_InteractiveDataApp.dot`  
+**Diagram:** `classes_InteractiveDataApp.dot`
 **Description:** Shows classes, methods, and relationships in a UML-style graph.
 
 ### 🔍 View:
@@ -54,7 +54,7 @@ dot -Tsvg diagrams/classes_InteractiveDataApp.dot -o diagrams/classes_Interactiv
 
 ## 🔄 Module Dependency Graph
 
-**Diagram:** `module_dependencies.svg`  
+**Diagram:** `module_dependencies.svg`
 **Description:** Displays real-world imports and module dependencies as analyzed by Pydeps.
 
 ### 🔍 View:
@@ -100,4 +100,3 @@ pydeps src/main.py --max-bacon=2 --noshow -T svg -o diagrams/module_deps.svg
 - Review diagrams when starting **new features** or **refactoring**.
 - Keep diagrams **up-to-date** as part of development workflow.
 - Include diagrams in **internal documentation and onboarding guides**.
-

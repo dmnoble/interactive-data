@@ -54,4 +54,3 @@
 ---
 
 _Use this checklist after every major milestone to ensure your project remains clean, scalable, and maintainable!_
-

@@ -56,4 +56,3 @@ Contributions are welcome! Please open issues and submit pull requests for impro
 ---
 
 _Made with ❤️ for productivity and customization._
-
