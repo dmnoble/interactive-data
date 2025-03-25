@@ -15,6 +15,7 @@ repos:
       - id: mypy
         args: ["--config-file=mypy.ini", "--no-incremental", "src/"]
         additional_dependencies: [PyQt5-stubs]
+        files: ^src/  # 👈 This restricts pre-commit to only run mypy on files in /src
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.5  # Update this to the latest version
