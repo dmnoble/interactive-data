@@ -84,27 +84,15 @@ class MainWindow(QMainWindow):
         self.search_box.setPlaceholderText("Search data...")
         self.search_box.textChanged.connect(self.search_data)
 
-        # Sample data and headers
-        sample_data = [
-            ["Alice", "Engineer", "Active"],
-            ["Bob", "Designer", "Inactive"],
-            ["Charlie", "Manager", "Active"],
-        ]
-        headers = ["Name", "Role", "Status"]
-
-        # Create the model and table view
-        self.model = DataTableModel(sample_data, headers)
-        self.table_view = QTableView()
-        self.table_view.setModel(self.model)
-        self.table_view.resizeColumnsToContents()
-
         # Add to layout
-        self.layout.addWidget(self.table_view)
-
         self.button = QPushButton("Load Data")
         self.button.clicked.connect(self.load_data)
 
+        self.reload_button = QPushButton("Reload Table")
+        self.reload_button.clicked.connect(self.reload_table)
+
         # Apply the UI
+        self.layout.addWidget(self.reload_button)
         self.layout.addWidget(self.profile_label)
         self.layout.addLayout(profile_layout)
         self.layout.addWidget(self.theme_label)
@@ -126,8 +114,23 @@ class MainWindow(QMainWindow):
         Returns:
             dict: The data loaded from  profile data file.
         """
-        data = self.data_manager.load_data()
-        print(f"Data Loaded for {self.current_profile}:", data)
+        # Load real data from DataManager
+        raw_data = self.data_manager.load_data()
+
+        # Dynamically get headers from first item (or fallback)
+        headers = list(raw_data[0].keys()) if raw_data else []
+
+        # Create the model
+        self.model = DataTableModel(raw_data, headers)
+        self.table_view = QTableView()
+        self.table_view.setModel(self.model)
+        self.table_view.resizeColumnsToContents()
+        self.layout.addWidget(self.table_view)
+
+    def reload_table(self):
+        new_data = self.data_manager.load_data()
+        self.model.update_data(new_data)
+        self.table_view.resizeColumnsToContents()
 
     def switch_profile(self):
         """

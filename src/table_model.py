@@ -2,10 +2,21 @@ from PyQt5.QtCore import Qt, QAbstractTableModel
 
 
 class DataTableModel(QAbstractTableModel):
-    def __init__(self, data, headers):
+    def __init__(self, data, headers=None):
         super().__init__()
-        self._data = data  # List of dicts or lists
-        self._headers = headers
+        self._raw_data = data or []
+
+        if headers:
+            self._headers = headers
+        else:
+            self._headers = (
+                list(self._raw_data[0].keys()) if self._raw_data else []
+            )
+
+        self._data = [
+            [item.get(header, "") for header in self._headers]
+            for item in self._raw_data
+        ]
 
     def rowCount(self, parent=None):
         return len(self._data)
@@ -41,3 +52,8 @@ class DataTableModel(QAbstractTableModel):
             self.dataChanged.emit(index, index)
             return True
         return False
+
+    def update_data(self, new_data):
+        self.beginResetModel()
+        self.__init__(new_data, headers=self._headers)
+        self.endResetModel()

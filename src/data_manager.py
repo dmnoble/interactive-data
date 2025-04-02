@@ -24,11 +24,16 @@ class DataManager:
             dict: The data loaded from the file.
         """
         try:
-            with open(self.file_path, "r") as file:
-                return json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            logger.exception(f"Config: could not find {self.file_path}.")
-            return {}
+            with open(self.file_path, "r") as f:
+                data = json.load(f)
+                if isinstance(data, list) and isinstance(data[0], dict):
+                    return data
+                else:
+                    # Fallback or error handling
+                    print("Unexpected data format")
+                    return []
+        except FileNotFoundError:
+            return []
 
     def save_data(self, data):
         """
