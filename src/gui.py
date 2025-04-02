@@ -15,6 +15,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette, QColor
 from logger import setup_logger
+from PyQt5.QtWidgets import QTableView
+from table_model import DataTableModel  # Import your shiny new model
+
 
 logger = setup_logger("gui")
 
@@ -80,6 +83,23 @@ class MainWindow(QMainWindow):
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search data...")
         self.search_box.textChanged.connect(self.search_data)
+
+        # Sample data and headers
+        sample_data = [
+            ["Alice", "Engineer", "Active"],
+            ["Bob", "Designer", "Inactive"],
+            ["Charlie", "Manager", "Active"],
+        ]
+        headers = ["Name", "Role", "Status"]
+
+        # Create the model and table view
+        self.model = DataTableModel(sample_data, headers)
+        self.table_view = QTableView()
+        self.table_view.setModel(self.model)
+        self.table_view.resizeColumnsToContents()
+
+        # Add to layout
+        self.layout.addWidget(self.table_view)
 
         self.button = QPushButton("Load Data")
         self.button.clicked.connect(self.load_data)
