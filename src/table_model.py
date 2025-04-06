@@ -1,10 +1,12 @@
 from PyQt5.QtCore import Qt, QAbstractTableModel
+from PyQt5.QtWidgets import QMessageBox
 
 
 class DataTableModel(QAbstractTableModel):
-    def __init__(self, data, headers=None):
+    def __init__(self, data, headers=None, data_manager=None):
         super().__init__()
         self._raw_data = data or []
+        self._data_manager = data_manager
 
         if headers:
             self._headers = headers
@@ -50,6 +52,24 @@ class DataTableModel(QAbstractTableModel):
             col = index.column()
             self._data[row][col] = value
             self.dataChanged.emit(index, index)
+
+        if self._data_manager:
+            try:
+                # Convert _data (list of lists) back to list of dicts
+                updated_data = [
+                    {
+                        self._headers[i]: row[i]
+                        for i in range(len(self._headers))
+                    }
+                    for row in self._data
+                ]
+                self._data_manager.save_data(updated_data)
+            except Exception as e:
+                QMessageBox.critical(
+                    None,
+                    "Save Failed",
+                    f"An error occurred while saving:\n{str(e)}",
+                )
             return True
         return False
 

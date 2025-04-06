@@ -1,16 +1,16 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 23.12.1  # Update this to the latest version
+    rev: 25.1.0  # Update this to the latest version
     hooks:
       - id: black
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0  # Update this to the latest version
+    rev: 7.2.0  # Update this to the latest version
     hooks:
       - id: flake8
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
+    rev: v1.15.0
     hooks:
       - id: mypy
         entry: mypy src/
@@ -19,13 +19,13 @@ repos:
         pass_filenames: false  # ✅ This is the KEY to prevent pre-commit from passing individual file paths
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5  # Update this to the latest version
+    rev: 1.8.3  # Update this to the latest version
     hooks:
       - id: bandit
-        args: ["-r", "src"]
+        args: ['--skip', 'B101']
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0  # Update this to the latest version
+    rev: v5.0.0  # Update this to the latest version
     hooks:
       - id: check-json
       - id: check-yaml

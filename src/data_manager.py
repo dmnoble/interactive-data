@@ -42,8 +42,13 @@ class DataManager:
         Parameter:
             data (dict): The data to save.
         """
-        with open(self.file_path, "w") as file:
-            json.dump(data, file, indent=4)
+        try:
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            logger.info("Data saved successfully.")
+        except Exception:
+            logger.exception("Failed to save data.")
+            raise  # Re-raise so the GUI can catch it
 
     def backup_data(self, backup_path="backup.json"):
         """

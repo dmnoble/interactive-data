@@ -65,8 +65,10 @@ jobs:
         run: |
           pip list --outdated
 
-      - name: Run bandit (Security Check)
-        run:  timeout 120s bandit -r src/ --exclude tests/,docs/,config_profiles/
+      - name: Run Bandit (Security Check)
+        run: |
+          timeout 120s bandit -r . \
+            --exclude ./tests,./docs,./config_profiles
 
   package:
     name: Package Application

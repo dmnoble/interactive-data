@@ -16,7 +16,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette, QColor
 from logger import setup_logger
 from PyQt5.QtWidgets import QTableView
-from table_model import DataTableModel  # Import your shiny new model
+from table_model import DataTableModel
 
 
 logger = setup_logger("gui")
@@ -121,7 +121,9 @@ class MainWindow(QMainWindow):
         headers = list(raw_data[0].keys()) if raw_data else []
 
         # Create the model
-        self.model = DataTableModel(raw_data, headers)
+        self.model = DataTableModel(
+            raw_data, headers, data_manager=self.data_manager
+        )
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
         self.table_view.resizeColumnsToContents()
