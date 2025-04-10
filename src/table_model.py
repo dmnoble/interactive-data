@@ -1,5 +1,4 @@
 from PyQt5.QtCore import Qt, QAbstractTableModel
-from PyQt5.QtWidgets import QMessageBox
 
 
 class DataTableModel(QAbstractTableModel):
@@ -7,6 +6,8 @@ class DataTableModel(QAbstractTableModel):
         super().__init__()
         self._raw_data = data or []
         self._data_manager = data_manager
+        self._dirty = False
+        self._backup_dirty = False
 
         if headers:
             self._headers = headers
@@ -46,30 +47,32 @@ class DataTableModel(QAbstractTableModel):
     def flags(self, index):
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
+    def is_dirty(self):
+        return self._dirty
+
+    def is_backup_dirty(self):
+        return self._backup_dirty
+
+    def mark_clean(self):
+        self._dirty = False
+
+    def mark_backup_clean(self):
+        self._backup_dirty = False
+
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
             row = index.row()
             col = index.column()
-            self._data[row][col] = value
-            self.dataChanged.emit(index, index)
+            current_value = self._data[row][col]
 
-        if self._data_manager:
-            try:
-                # Convert _data (list of lists) back to list of dicts
-                updated_data = [
-                    {
-                        self._headers[i]: row[i]
-                        for i in range(len(self._headers))
-                    }
-                    for row in self._data
-                ]
-                self._data_manager.save_data(updated_data)
-            except Exception as e:
-                QMessageBox.critical(
-                    None,
-                    "Save Failed",
-                    f"An error occurred while saving:\n{str(e)}",
-                )
+            if current_value == value:
+                return False  # No change → no dirty flag
+
+            self._data[row][col] = value
+            self._dirty = True
+            self._backup_dirty = True
+            self.dataChanged.emit(index, index)
+            # Let auto-save handle the actual save
             return True
         return False
 
@@ -77,3 +80,9 @@ class DataTableModel(QAbstractTableModel):
         self.beginResetModel()
         self.__init__(new_data, headers=self._headers)
         self.endResetModel()
+
+    def get_current_data_as_dicts(self):
+        return [
+            {self._headers[i]: row[i] for i in range(len(self._headers))}
+            for row in self._data
+        ]

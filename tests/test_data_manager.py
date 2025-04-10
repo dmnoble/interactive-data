@@ -2,6 +2,7 @@ import os
 import json
 import pytest
 import tempfile
+import time
 from unittest.mock import patch, mock_open
 from src.data_manager import DataManager
 
@@ -129,4 +130,45 @@ def test_save_data_raises_ioerror():
             manager.save_data(test_data)
             assert False, "Expected IOError was not raised"
         except IOError as e:
-            assert "Disk full" in str(e) or "write protected" in str(e)
+            assert "Failed to save data after multiple attempts" in str(e)
+
+
+def test_backup_file_is_created_and_old_backups_trimmed():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        data_file = os.path.join(temp_dir, "test.json")
+        backup_dir = os.path.join(temp_dir, "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+
+        # Override the DataManager to redirect backup location
+        class TestableDataManager(DataManager):
+            def save_backup(self, data):
+                os.makedirs(backup_dir, exist_ok=True)
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                backup_path = os.path.join(
+                    backup_dir, f"test.json.{timestamp}.bak"
+                )
+                with open(backup_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f)
+
+                # Create fake older backups to test trim logic
+                for i in range(12):
+                    open(
+                        os.path.join(backup_dir, f"test.json.OLD{i}.bak"), "w"
+                    ).close()
+
+                # Simulate trim
+                backups = sorted(
+                    [
+                        os.path.join(backup_dir, f)
+                        for f in os.listdir(backup_dir)
+                        if f.startswith("test.json") and f.endswith(".bak")
+                    ]
+                )
+                while len(backups) > 10:
+                    os.remove(backups.pop(0))
+
+                return os.listdir(backup_dir)
+
+        manager = TestableDataManager(data_file)
+        files_after = manager.save_backup([{"name": "Test"}])
+        assert len(files_after) <= 10

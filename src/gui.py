@@ -12,12 +12,12 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QHBoxLayout,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QPalette, QColor
 from logger import setup_logger
 from PyQt5.QtWidgets import QTableView
 from table_model import DataTableModel
-
+from PyQt5.QtCore import QTimer
 
 logger = setup_logger("gui")
 
@@ -46,6 +46,23 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
+
+        # Auto-Save Logic
+        self.auto_save_timer = QTimer()
+        self.auto_save_timer.timeout.connect(self.check_dirty_and_save)
+        self.auto_save_timer.start(5 * 60 * 1000)  # Every 5 minutes
+
+        # GUI label for time since last save
+        self.last_save_time = QDateTime.currentDateTime()
+        self.save_label = QLabel("Last saved: just now")
+        self.save_timer = QTimer()
+        self.save_timer.timeout.connect(self.update_save_label)
+        self.save_timer.start(60 * 1000)  # every minute
+
+        # Timer for the hourly backup
+        self.backup_timer = QTimer()
+        self.backup_timer.timeout.connect(self.auto_backup_if_needed)
+        self.backup_timer.start(60 * 60 * 1000)  # every hour in ms
 
         self.layout = QVBoxLayout()
 
@@ -99,6 +116,7 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.theme_selector)
         self.layout.addWidget(self.search_box)
         self.layout.addWidget(self.button)
+        self.layout.addWidget(self.save_label)
 
         container = QWidget()
         container.setLayout(self.layout)
@@ -106,6 +124,38 @@ class MainWindow(QMainWindow):
 
         # Apply theme after loading profile
         self.apply_theme()
+
+    def check_dirty_and_save(self):
+        if self.model.is_dirty():
+            try:
+                data = self.model.get_current_data_as_dicts()
+                self.data_manager.save_data(data)
+                self.last_save_time = QDateTime.currentDateTime()
+                self.model.mark_clean()
+                print("Auto-save complete.")
+            except Exception as e:
+                print("Auto-save failed:", e)
+
+    def update_save_label(self):
+        minutes = self.last_save_time.secsTo(QDateTime.currentDateTime()) // 60
+        if minutes == 0:
+            self.save_label.setText("Last saved: just now")
+        elif minutes == 1:
+            self.save_label.setText("Last saved: 1 minute ago")
+        else:
+            self.save_label.setText(f"Last saved: {minutes} minutes ago")
+
+    def auto_backup_if_needed(self):
+        """
+        Auto-Backup Every Hour
+        """
+        if self.model.is_backup_dirty():
+            try:
+                data = self.model.get_current_data_as_dicts()
+                self.data_manager.save_backup(data)
+                self.model.mark_backup_clean()
+            except Exception as e:
+                print("Auto-backup failed:", e)
 
     def load_data(self):
         """
@@ -209,3 +259,8 @@ class MainWindow(QMainWindow):
         """
         self.profile_selector.clear()
         self.profile_selector.addItems(get_profiles())
+
+    def closeEvent(self, event):
+        self.auto_backup_if_needed()
+        self.check_dirty_and_save()
+        event.accept()
