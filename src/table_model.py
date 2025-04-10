@@ -2,6 +2,23 @@ from PyQt5.QtCore import Qt, QAbstractTableModel
 
 
 class DataTableModel(QAbstractTableModel):
+    """
+    A Qt-compatible table model for displaying and editing structured user
+    data.
+
+    This model supports:
+    - Displaying a list of dictionaries as rows in a QTableView
+    - Editable cells with change detection
+    - Auto-saving through a connected DataManager (on real changes only)
+    - Tracking of 'dirty' state for periodic auto-saves
+    - Tracking of 'backup-dirty' state for controlled backup generation
+    - Optional extraction of headers from the input data
+
+    Designed for seamless integration into an interactive data viewing app,
+    this model prioritizes reliability, real-time feedback, and user
+    transparency.
+    """
+
     def __init__(self, data, headers=None, data_manager=None):
         super().__init__()
         self._raw_data = data or []

@@ -14,6 +14,15 @@
 - Theme applied automatically on app startup.
 - 'Add Profile' button in GUI for real-time profile creation.
 
+### Version 1.2.0
+- Implemented editable QTableView for displaying and modifying user data.
+- Connected table to live config files via DataManager.
+- Automatic saving of changes every 5 minutes if data was modified.
+- Hourly backups stored in /backups, with a cap of 10 most recent versions.
+- Dirty-flag system tracks unsaved changes to prevent unnecessary disk writes.
+- GUI label dynamically displays “Last saved: X minutes ago.”
+- Full test coverage for save behavior, backup cap, dirty flag logic, and save timers.
+
 ---
 
 ## 🚧 In Progress

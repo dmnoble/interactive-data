@@ -14,6 +14,9 @@ A Python-based desktop application to manage, view, and interact with user data 
 - Search functionality to filter data.
 - GUI-based profile creation and selection.
 - Data loading and saving with backup support.
+- Interactive data table with editable cells and auto-saving.
+- Hourly backups with change detection and retention cap.
+- GUI label showing time since last successful save.
 
 ## 📦 Installation
 
