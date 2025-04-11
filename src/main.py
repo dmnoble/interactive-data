@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from gui import MainWindow
 from data_manager import DataManager
 from logger import setup_logger
+from version import __version__
 
 """
 @todo
@@ -31,6 +32,6 @@ if __name__ == "__main__":
     app.setStyle("Fusion")
 
     data_manager = DataManager()
-    main_window = MainWindow(data_manager)
+    main_window = MainWindow(data_manager, __version__)
     main_window.show()
     sys.exit(app.exec_())

@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         data_manager (Data_Manager): controls how data is saved and loaded.
     """
 
-    def __init__(self, data_manager):
+    def __init__(self, data_manager, version):
         """
         Initiates data manager for user to interact with data.
 
@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
+        self.model = None
 
         # Auto-Save Logic
         self.auto_save_timer = QTimer()
@@ -119,6 +120,16 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
 
+        # Footer layout for version info
+        footer_layout = QHBoxLayout()
+        self.version_label = QLabel(f"v{version} running")
+        self.version_label.setStyleSheet("color: gray; font-size: 10px;")
+        footer_layout.addWidget(self.version_label)
+        footer_layout.addStretch()  # Push label to the left or right
+
+        # Add to main layout
+        self.layout.addLayout(footer_layout)
+
         container = QWidget()
         container.setLayout(self.layout)
         self.setCentralWidget(container)
@@ -127,7 +138,7 @@ class MainWindow(QMainWindow):
         self.apply_theme()
 
     def check_dirty_and_save(self):
-        if self.model.is_dirty():
+        if self.model and self.model.is_dirty():
             try:
                 data = self.model.get_current_data_as_dicts()
                 self.data_manager.save_data(data)
@@ -142,9 +153,9 @@ class MainWindow(QMainWindow):
 
     def auto_backup_if_needed(self):
         """
-        Auto-Backup Every Hour
+        Auto-Backup every hour and on close
         """
-        if self.model.is_backup_dirty():
+        if self.model and self.model.is_backup_dirty():
             try:
                 data = self.model.get_current_data_as_dicts()
                 self.data_manager.save_backup(data)

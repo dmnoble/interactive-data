@@ -13,10 +13,14 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        entry: mypy src/
-        args: ["--config-file=mypy.ini", "--no-incremental"]
+        entry: mypy
+        args:
+          - src
+          - --config-file=mypy.ini
+          - --no-incremental
+          - --explicit-package-bases
         additional_dependencies: [PyQt5-stubs]
-        pass_filenames: false  # ✅ This is the KEY to prevent pre-commit from passing individual file paths
+        pass_filenames: false  # To prevent pre-commit from passing individual file paths
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.3  # Update this to the latest version
