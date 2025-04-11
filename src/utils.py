@@ -1,4 +1,6 @@
+from typing import Optional
 from datetime import datetime
+from PyQt5.QtCore import QDateTime
 
 
 def format_date(date_string):
@@ -54,3 +56,16 @@ def get_current_timestamp():
     Returns the current timestamp in YYYY-MM-DD HH:MM:SS format.
     """
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_save_time_label_text(
+    last_save_time: QDateTime, current_time: Optional[QDateTime] = None
+) -> str:
+    current_time = current_time or QDateTime.currentDateTime()
+    minutes = last_save_time.secsTo(current_time) // 60
+    if minutes == 0:
+        return "Last saved: just now"
+    elif minutes == 1:
+        return "Last saved: 1 minute ago"
+    else:
+        return f"Last saved: {minutes} minutes ago"

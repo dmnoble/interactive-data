@@ -18,6 +18,7 @@ from logger import setup_logger
 from PyQt5.QtWidgets import QTableView
 from table_model import DataTableModel
 from PyQt5.QtCore import QTimer
+from utils import get_save_time_label_text
 
 logger = setup_logger("gui")
 
@@ -137,13 +138,7 @@ class MainWindow(QMainWindow):
                 print("Auto-save failed:", e)
 
     def update_save_label(self):
-        minutes = self.last_save_time.secsTo(QDateTime.currentDateTime()) // 60
-        if minutes == 0:
-            self.save_label.setText("Last saved: just now")
-        elif minutes == 1:
-            self.save_label.setText("Last saved: 1 minute ago")
-        else:
-            self.save_label.setText(f"Last saved: {minutes} minutes ago")
+        self.save_label.setText(get_save_time_label_text(self.last_save_time))
 
     def auto_backup_if_needed(self):
         """
