@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 from undo_redo import Action
+from PyQt5.QtWidgets import QMessageBox
 
 
 class DataTableModel(QAbstractTableModel):
@@ -25,6 +26,7 @@ class DataTableModel(QAbstractTableModel):
     stack_changed = pyqtSignal()
     undo_stack: list[Action] = []
     redo_stack: list[Action] = []
+    unsaved_action_stack: list[Action] = []
     undo_log_path = Path(".undo_log.json")
 
     def __init__(self, data, headers=None, data_manager=None):
@@ -34,6 +36,13 @@ class DataTableModel(QAbstractTableModel):
         self._data_manager = data_manager
         self._dirty = False
         self._backup_dirty = False
+
+        if self.model.undo_log_path.exists():
+            if self.prompt_user_for_recovery():
+                self.model.load_undo_stack_from_file()
+                self.model.replay_undo_stack()
+            else:
+                self.model.undo_log_path.unlink()
 
         if headers:
             self._headers = headers
@@ -99,6 +108,7 @@ class DataTableModel(QAbstractTableModel):
             self.undo_stack.append(action)
             self.redo_stack.clear()
             # After pushing action
+            self.unsaved_action_stack.append(action)
             self.stack_changed.emit()
 
             self._data[row][col] = value
@@ -123,6 +133,8 @@ class DataTableModel(QAbstractTableModel):
     def undo(self):
         if self.undo_stack:
             action = self.undo_stack.pop()
+            if self.unsaved_action_stack:
+                self.unsaved_action_stack.pop()
             self._apply_action(action, undo=True)
             self.redo_stack.append(action)
             self.stack_changed.emit()
@@ -132,6 +144,7 @@ class DataTableModel(QAbstractTableModel):
             action = self.redo_stack.pop()
             self._apply_action(action, undo=False)
             self.undo_stack.append(action)
+            self.unsaved_action_stack.append(action)
             self.stack_changed.emit()
 
     def _apply_action(self, action, undo=True):
@@ -144,18 +157,43 @@ class DataTableModel(QAbstractTableModel):
         index = self.index(action.row, action.column)
         self.dataChanged.emit(index, index, [Qt.DisplayRole])
 
-    def write_undo_stack_to_file(self):
+    def write_recovery_log_to_file(self):
         with open(self.undo_log_path, "w", encoding="utf-8") as f:
             json.dump(
-                [
-                    {
-                        "row": action.row,
-                        "column": action.column,
-                        "old_value": action.old_value,
-                        "new_value": action.new_value,
-                    }
-                    for action in self.undo_stack
-                ],
+                {
+                    "unsaved_action_stack": [
+                        a.__dict__ for a in self.unsaved_action_stack
+                    ],
+                    "undo_stack": [a.__dict__ for a in self.undo_stack],
+                    "redo_stack": [a.__dict__ for a in self.redo_stack],
+                },
                 f,
                 indent=2,
             )
+
+    def load_undo_stack_from_file(self):
+        with open(self.undo_log_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            self.unsaved_action_stack = [
+                Action(**entry)
+                for entry in data.get("unsaved_action_stack", [])
+            ]
+
+    def replay_undo_stack(self):
+        try:
+            for action in self.undo_stack:
+                self._apply_action(action, undo=False)
+        except Exception as e:
+            print("Corrupted log: ", e)
+
+    def prompt_user_for_recovery(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Recovery Available")
+        msg.setText(
+            "It looks like the application closed before the last session"
+            + "could autosave.\n\nWould you like to load your most recent"
+            + "unsaved changes?"
+        )
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        return msg.exec_() == QMessageBox.Yes

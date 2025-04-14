@@ -177,6 +177,7 @@ class MainWindow(QMainWindow):
                 self.last_save_time = QDateTime.currentDateTime()
                 self.model.mark_clean()
 
+                self.unsaved_action_stack.clear()
                 if self.undo_log_path.exists():
                     self.undo_log_path.unlink()
 
