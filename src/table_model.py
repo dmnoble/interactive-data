@@ -1,4 +1,7 @@
-from PyQt5.QtCore import Qt, QAbstractTableModel
+import json
+from pathlib import Path
+from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
+from undo_redo import Action
 
 
 class DataTableModel(QAbstractTableModel):
@@ -19,8 +22,14 @@ class DataTableModel(QAbstractTableModel):
     transparency.
     """
 
+    stack_changed = pyqtSignal()
+    undo_stack: list[Action] = []
+    redo_stack: list[Action] = []
+    undo_log_path = Path(".undo_log.json")
+
     def __init__(self, data, headers=None, data_manager=None):
         super().__init__()
+        self.stack_changed.connect(self.write_undo_stack_to_file)
         self._raw_data = data or []
         self._data_manager = data_manager
         self._dirty = False
@@ -85,6 +94,13 @@ class DataTableModel(QAbstractTableModel):
             if current_value == value:
                 return False  # No change → no dirty flag
 
+            # Inside setData (after verifying data has changed):
+            action = Action(index.row(), index.column(), current_value, value)
+            self.undo_stack.append(action)
+            self.redo_stack.clear()
+            # After pushing action
+            self.stack_changed.emit()
+
             self._data[row][col] = value
             self._dirty = True
             self._backup_dirty = True
@@ -103,3 +119,43 @@ class DataTableModel(QAbstractTableModel):
             {self._headers[i]: row[i] for i in range(len(self._headers))}
             for row in self._data
         ]
+
+    def undo(self):
+        if self.undo_stack:
+            action = self.undo_stack.pop()
+            self._apply_action(action, undo=True)
+            self.redo_stack.append(action)
+            self.stack_changed.emit()
+
+    def redo(self):
+        if self.redo_stack:
+            action = self.redo_stack.pop()
+            self._apply_action(action, undo=False)
+            self.undo_stack.append(action)
+            self.stack_changed.emit()
+
+    def _apply_action(self, action, undo=True):
+        value = action.old_value if undo else action.new_value
+        self._data[action.row][
+            action.column
+        ] = value  # Update the data directly
+
+        # Notify the view
+        index = self.index(action.row, action.column)
+        self.dataChanged.emit(index, index, [Qt.DisplayRole])
+
+    def write_undo_stack_to_file(self):
+        with open(self.undo_log_path, "w", encoding="utf-8") as f:
+            json.dump(
+                [
+                    {
+                        "row": action.row,
+                        "column": action.column,
+                        "old_value": action.old_value,
+                        "new_value": action.new_value,
+                    }
+                    for action in self.undo_stack
+                ],
+                f,
+                indent=2,
+            )

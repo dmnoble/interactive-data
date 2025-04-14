@@ -11,9 +11,10 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QInputDialog,
     QHBoxLayout,
+    QShortcut,
 )
 from PyQt5.QtCore import Qt, QDateTime
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QKeySequence
 from logger import setup_logger
 from PyQt5.QtWidgets import QTableView
 from table_model import DataTableModel
@@ -47,7 +48,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
-        self.model = None
+
+        # Todo: keep these from being order dependent
+        self.layout = QVBoxLayout()
+        self.load_data()
 
         # Auto-Save Logic
         self.auto_save_timer = QTimer()
@@ -65,8 +69,6 @@ class MainWindow(QMainWindow):
         self.backup_timer = QTimer()
         self.backup_timer.timeout.connect(self.auto_backup_if_needed)
         self.backup_timer.start(60 * 60 * 1000)  # every hour in ms
-
-        self.layout = QVBoxLayout()
 
         # Profile selection dropdown
         self.profile_label = QLabel("Select Profile:")
@@ -107,11 +109,41 @@ class MainWindow(QMainWindow):
         self.button = QPushButton("Load Data")
         self.button.clicked.connect(self.load_data)
 
-        self.reload_button = QPushButton("Reload Table")
-        self.reload_button.clicked.connect(self.reload_table)
+        # Undo Redo
+        # Add buttons:
+        self.undo_button = QPushButton("Undo (Ctrl+Z)")
+        self.redo_button = QPushButton("Redo (Ctrl+Y)")
+        self.undo_button.clicked.connect(self.model.undo)
+        self.redo_button.clicked.connect(self.model.redo)
+
+        # Add to layout:
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.undo_button)
+        button_layout.addWidget(self.redo_button)
+
+        # Add shortcuts:
+        undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
+        undo_shortcut.activated.connect(self.model.undo)
+        redo_shortcut.activated.connect(self.model.redo)
+
+        # Undo/Redo history pulldown
+        self.undo_history_combo = QComboBox()
+        self.redo_history_combo = QComboBox()
+        self.undo_history_combo.setPlaceholderText("Undo History")
+        self.redo_history_combo.setPlaceholderText("Redo History")
+
+        # Add to layout (next to undo/redo buttons):
+        combo_layout = QHBoxLayout()
+        combo_layout.addWidget(self.undo_history_combo)
+        combo_layout.addWidget(self.redo_history_combo)
+
+        # Connect to model update:
+        self.model.stack_changed.connect(self.update_undo_redo_history)
 
         # Apply the UI
-        self.layout.addWidget(self.reload_button)
+        self.layout.addLayout(button_layout)
+        self.layout.addLayout(combo_layout)
         self.layout.addWidget(self.profile_label)
         self.layout.addLayout(profile_layout)
         self.layout.addWidget(self.theme_label)
@@ -144,6 +176,10 @@ class MainWindow(QMainWindow):
                 self.data_manager.save_data(data)
                 self.last_save_time = QDateTime.currentDateTime()
                 self.model.mark_clean()
+
+                if self.undo_log_path.exists():
+                    self.undo_log_path.unlink()
+
                 print("Auto-save complete.")
             except Exception as e:
                 print("Auto-save failed:", e)
@@ -184,11 +220,6 @@ class MainWindow(QMainWindow):
         self.table_view.setModel(self.model)
         self.table_view.resizeColumnsToContents()
         self.layout.addWidget(self.table_view)
-
-    def reload_table(self):
-        new_data = self.data_manager.load_data()
-        self.model.update_data(new_data)
-        self.table_view.resizeColumnsToContents()
 
     def switch_profile(self):
         """
@@ -265,6 +296,14 @@ class MainWindow(QMainWindow):
         """
         self.profile_selector.clear()
         self.profile_selector.addItems(get_profiles())
+
+    def update_undo_redo_history(self):
+        self.undo_history_combo.clear()
+        self.redo_history_combo.clear()
+        for action in reversed(self.model.undo_stack):
+            self.undo_history_combo.addItem(action.description())
+        for action in reversed(self.model.redo_stack):
+            self.redo_history_combo.addItem(action.description())
 
     def closeEvent(self, event):
         self.auto_backup_if_needed()
