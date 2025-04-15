@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Switching profiles now triggers a safe save and log cleanup.
 
 
-## [1.2.0] - 2024-04-03
+## [1.3.0] - 2024-04-03
 ### Added
 - Editable QTableView connected to real user data
 - Auto-saving every 5 minutes using a dirty flag system
