@@ -33,6 +33,9 @@ jobs:
 
       - name: Run unit tests
         run: pytest tests/
+        env:
+          QT_QPA_PLATFORM: offscreen
+          IDW_TEST_MODE: "1"
 
   lint:
     name: Code Linting & Security Checks
