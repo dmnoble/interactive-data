@@ -23,17 +23,24 @@
 - GUI label dynamically displays “Last saved: X minutes ago.”
 - Full test coverage for save behavior, backup cap, dirty flag logic, and save timers.
 
+### Version 1.3.0
+- Added Undo/Redo support for table edits using keyboard (Ctrl+Z/Ctrl+Y) and GUI buttons.
+- Pull-down lists of undoable and redoable actions shown in real time.
+- Unsaved actions now persist to `.undo_log.json` until next autosave.
+- Crash recovery logic prompts user to reload last unsaved changes.
+- Undo/redo history clears on profile switch.
+- History display updates dynamically after each change.
+- Unit tests for undo/redo logic, crash recovery, and replay behavior.
+
 ---
 
-## 🚧 In Progress
+## 🔜 Planned Features
 
-- Visual data display (table view).
-- Sorting and filtering system (user-configurable).
-- Named sort/filter configurations saved per profile.
-
----
-
-## 🗺 Planned Features
+- Saved filter and sort configurations per user profile
+- Snapshot viewer for selecting from and restoring backup versions
+- Enhanced search and tag-based filtering
+- Optional version tag display in table header or footer
+- Visual dashboard or data summary widget
 
 ### User Data Interaction
 - Editable data entries with add/remove capability.
@@ -41,12 +48,10 @@
 - User-defined functions for calculated fields (e.g., "Available" based on date).
 
 ### User Experience Improvements
-- Undo/Redo system for user actions.
 - GUI tooltips and help popups.
 - Interactive data features like clickable links.
 
 ### Maintenance & Quality
-- Auto-save and periodic backup system.
 - Robust error handling and validation.
 
 ---

@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2024-04-13
+### Added
+- Undo/Redo support for table edits using keyboard (Ctrl+Z/Ctrl+Y) and GUI buttons.
+- Pull-down lists of undoable and redoable actions shown in real time.
+- Unsaved actions now persist to `.undo_log.json` until next autosave.
+- Crash recovery logic prompts user to reload last unsaved changes.
+- Undo/redo history clears on profile switch.
+- History display updates dynamically after each change.
+- Unit tests for undo/redo logic, crash recovery, and replay behavior.
+
+### Fixed
+- Actions with no data change no longer create undo entries.
+- Switching profiles now triggers a safe save and log cleanup.
+
+
 ## [1.2.0] - 2024-04-03
 ### Added
 - Editable QTableView connected to real user data
@@ -21,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Added unit tests for dirty flag behavior, save error handling, backup cap enforcement, and label update logic
 
 This marks the completion of the data table feature branch and paves the way for advanced editing features like undo/redo and filtering.
+
 
 ## [1.1.0] - 2024-03-05
 ### Added

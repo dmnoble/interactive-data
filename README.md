@@ -36,6 +36,21 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## 🚀 Features
+
+- Dynamic user profiles with separate settings.
+- Dark and light mode themes with GUI palette switching.
+- Profile-specific configuration and data management.
+- Search functionality to filter data.
+- GUI-based profile creation and selection.
+- Data loading and saving with backup support.
+- Interactive data table with editable cells and auto-saving.
+- Hourly backups with change detection and retention cap.
+- GUI label showing time since last successful save.
+- Undo/Redo support for table edits via keyboard and GUI buttons.
+- Pull-down GUI view of undoable/redoable action history.
+- Crash recovery with auto-reload of unsaved actions.
+
 ## ⚙ Usage
 
 - **Create Profile**: On first run, or by clicking 'Add Profile' button.
