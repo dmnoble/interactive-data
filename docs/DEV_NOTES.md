@@ -25,6 +25,18 @@ A living document to capture insights, lessons learned, and development reflecti
 - **Solution**: Use `QPalette` and adjust all necessary color roles; apply on theme selector change.
 - **Improvement Idea**: Add more customization (font size, button colors).
 
+### Milestone: Undo/Redo with Recovery
+- **Goal**: Implement an undo/redo system that survives crashes and supports GUI history tracking.
+
+#### 🧪 Testing & Troubleshooting
+- **Problem**: Tests crashed or hung silently when triggering PyQt5 GUI elements (e.g., recovery prompt).
+- **Solution**:
+  - Introduced `IDW_TEST_MODE` environment variable to suppress GUI prompts during test runs
+  - Patched CI with `QT_QPA_PLATFORM=offscreen` to prevent PyQt from rendering GUI on headless Linux runners
+
+#### 🛠 Integration Notes
+- **Log Versioning**: Added a `"version": 1` field to `.undo_log.json` for future-proofing
+
 ---
 
 ## 🚀 Future Dev Ideas & Reminders
@@ -33,6 +45,7 @@ A living document to capture insights, lessons learned, and development reflecti
 - **Profile management improvements**: allow rename/delete profiles directly from the GUI.
 - **Consider using PyQt's model-view architecture** for scalable data display and editing.
 - **Explore modular GUI design** for better separation of concerns (data view vs. config panel).
+- **Profile switching autosave**: Ensure autosave triggers before switching profiles to preserve changes and clear temporary undo log.
 
 ---
 
