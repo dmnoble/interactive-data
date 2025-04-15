@@ -3,6 +3,7 @@ from pathlib import Path
 from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 from undo_redo import Action
 from PyQt5.QtWidgets import QMessageBox
+import os
 
 
 class DataTableModel(QAbstractTableModel):
@@ -38,7 +39,8 @@ class DataTableModel(QAbstractTableModel):
         self._backup_dirty = False
 
         if self.undo_log_path.exists():
-            if self.prompt_user_for_recovery():
+            test_mode = os.environ.get("IDW_TEST_MODE") == "1"
+            if test_mode or self.prompt_user_for_recovery():
                 self.load_undo_stack_from_file()
                 self.replay_undo_stack()
             else:

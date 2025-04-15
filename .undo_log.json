@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "unsaved_action_stack": [
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Ally"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Ally"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Ally"
+    }
+  ],
+  "undo_stack": [
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Alicia"
+    },
+    {
+      "row": 0,
+      "column": 0,
+      "old_value": "Alice",
+      "new_value": "Ally"
+    }
+  ],
+  "redo_stack": []
+}
