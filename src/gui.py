@@ -226,6 +226,8 @@ class MainWindow(QMainWindow):
         """
         Handles switching user profiles.
         """
+        if self.current_profile == self.profile_selector.currentText():
+            return
         self.current_profile = self.profile_selector.currentText()
         self.config = load_config(self.current_profile)
         if self.theme_selector:
@@ -233,6 +235,25 @@ class MainWindow(QMainWindow):
                 "Dark" if self.config.get("dark_mode", False) else "Light"
             )
         self.apply_theme()
+        if self.model:
+            try:
+                data = self.model.get_current_data_as_dicts()
+                self.data_manager.save_data(data)
+                if self.model.undo_stack:
+                    self.model.undo_stack.clear()
+                if self.model.redo_stack:
+                    self.model.redo_stack.clear()
+                if self.model.unsaved_action_stack:
+                    self.model.unsaved_action_stack.clear()
+                if self.model.undo_log_path.exists():
+                    self.model.undo_log_path.unlink()
+                print("Auto-save complete before profile switch.")
+            except Exception as e:
+                print("Auto-save before profile switch failed:", e)
+        # Clear history dropdowns
+        self.undo_history_combo.clear()
+        self.redo_history_combo.clear()
+
         print(f"Switched to profile: {self.current_profile}")
 
     def update_theme(self):

@@ -161,6 +161,7 @@ class DataTableModel(QAbstractTableModel):
         with open(self.undo_log_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
+                    "version": 1,
                     "unsaved_action_stack": [
                         a.__dict__ for a in self.unsaved_action_stack
                     ],
