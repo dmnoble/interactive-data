@@ -31,18 +31,18 @@ class DataTableModel(QAbstractTableModel):
 
     def __init__(self, data, headers=None, data_manager=None):
         super().__init__()
-        self.stack_changed.connect(self.write_undo_stack_to_file)
+        self.stack_changed.connect(self.write_recovery_log_to_file)
         self._raw_data = data or []
         self._data_manager = data_manager
         self._dirty = False
         self._backup_dirty = False
 
-        if self.model.undo_log_path.exists():
+        if self.undo_log_path.exists():
             if self.prompt_user_for_recovery():
-                self.model.load_undo_stack_from_file()
-                self.model.replay_undo_stack()
+                self.load_undo_stack_from_file()
+                self.replay_undo_stack()
             else:
-                self.model.undo_log_path.unlink()
+                self.undo_log_path.unlink()
 
         if headers:
             self._headers = headers
@@ -181,7 +181,7 @@ class DataTableModel(QAbstractTableModel):
 
     def replay_undo_stack(self):
         try:
-            for action in self.undo_stack:
+            for action in self.unsaved_action_stack:
                 self._apply_action(action, undo=False)
         except Exception as e:
             print("Corrupted log: ", e)
