@@ -3,7 +3,6 @@ from pathlib import Path
 from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 from undo_redo import Action
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtGui import QColor
 import os
 
 
@@ -82,12 +81,38 @@ class DataTableModel(QAbstractTableModel):
         value = self._data[row][col]
 
         if role == Qt.DisplayRole:
-            return str(value)
+            display = str(value)
+            if self._proxy_model:
+                search = self._proxy_model.search_text
+                case_sensitive = getattr(
+                    self._proxy_model, "case_sensitive", False
+                )
+                if search:
+                    text_to_search = (
+                        display if case_sensitive else display.lower()
+                    )
+                    search_key = search if case_sensitive else search.lower()
+                    if search_key in text_to_search:
+                        start = text_to_search.index(search_key)
+                        end = start + len(search_key)
+                        # soft blue or yellow
+                        bg_color = "#505b76" if self._dark_mode else "#ffff00"
+                        text_color = "white" if self._dark_mode else "black"
 
-        if role == Qt.BackgroundRole and self._proxy_model:
-            search_text = self._proxy_model.search_text
-            if search_text and search_text.lower() in str(value).lower():
-                return QColor("#505b76" if self._dark_mode else "#ffffb3")
+                        # Highlight only match but apply text color to
+                        # entire span
+                        highlighted = (
+                            f'<span style="color: {text_color}">'
+                            + display[:start]
+                            + f'<span style="background-color: {bg_color}">'
+                            + f"{display[start:end]}</span>"
+                            + display[end:]
+                            + "</span>"
+                        )
+                        return highlighted
+            # Default: wrap full text to apply text color even with no match
+            text_color = "white" if self._dark_mode else "black"
+            return f'<span style="color: {text_color}">{display}</span>'
         return None
 
     def set_dark_mode(self, enabled):

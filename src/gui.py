@@ -12,15 +12,17 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QHBoxLayout,
     QShortcut,
+    QTableView,
+    QCheckBox,
+    QHeaderView,
 )
-from PyQt5.QtCore import Qt, QDateTime
+from PyQt5.QtCore import Qt, QDateTime, QTimer
 from PyQt5.QtGui import QPalette, QColor, QKeySequence
 from logger import setup_logger
-from PyQt5.QtWidgets import QTableView
 from filter_proxy import TableFilterProxyModel
 from table_model import DataTableModel
-from PyQt5.QtCore import QTimer
 from utils import get_save_time_label_text
+from rich_text_delegate import RichTextDelegate
 
 logger = setup_logger("gui")
 
@@ -107,7 +109,16 @@ class MainWindow(QMainWindow):
         # Data handling
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search data...")
+        self.case_checkbox = QCheckBox("Case Sensitive")
+        self.case_checkbox.setChecked(False)
+        self.case_checkbox.stateChanged.connect(
+            lambda state: self.proxy_model.set_case_sensitive(
+                state == Qt.Checked
+            )
+        )
+
         self.table_view.setModel(self.proxy_model)
+        self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
         self.search_box.textChanged.connect(self.proxy_model.set_search_text)
 
         # Add to layout
@@ -154,6 +165,7 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.theme_label)
         self.layout.addWidget(self.theme_selector)
         self.layout.addWidget(self.search_box)
+        self.layout.addWidget(self.case_checkbox)
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
 
@@ -229,7 +241,18 @@ class MainWindow(QMainWindow):
         self.proxy_model.setSourceModel(self.model)
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
-        self.table_view.resizeColumnsToContents()
+        # Render HTML in cells — including the fancy
+        # substring <span style=...> highlights from search.
+        self.table_view.setItemDelegate(RichTextDelegate())
+        # Start compact: auto-size to content initially
+        self.table_view.horizontalHeader().setStretchLastSection(False)
+        self.table_view.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Interactive
+        )
+        # Give Qt a moment to measure based on the new delegate rendering
+        QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
+        self.table_view.setWordWrap(False)
+        self.table_view.setTextElideMode(Qt.ElideRight)
         self.table_view.setSortingEnabled(True)
         self.layout.addWidget(self.table_view)
 
