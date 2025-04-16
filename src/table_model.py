@@ -3,6 +3,7 @@ from pathlib import Path
 from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 from undo_redo import Action
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtGui import QColor
 import os
 
 
@@ -30,11 +31,20 @@ class DataTableModel(QAbstractTableModel):
     unsaved_action_stack: list[Action] = []
     undo_log_path = Path(".undo_log.json")
 
-    def __init__(self, data, headers=None, data_manager=None):
+    def __init__(
+        self,
+        data,
+        headers=None,
+        data_manager=None,
+        proxy_model=None,
+        dark_mode=False,
+    ):
         super().__init__()
         self.stack_changed.connect(self.write_recovery_log_to_file)
         self._raw_data = data or []
         self._data_manager = data_manager
+        self._proxy_model = proxy_model
+        self._dark_mode = dark_mode
         self._dirty = False
         self._backup_dirty = False
 
@@ -67,11 +77,22 @@ class DataTableModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return None
-        if role == Qt.DisplayRole or role == Qt.EditRole:
-            row = index.row()
-            col = index.column()
-            return self._data[row][col]
+        row = index.row()
+        col = index.column()
+        value = self._data[row][col]
+
+        if role == Qt.DisplayRole:
+            return str(value)
+
+        if role == Qt.BackgroundRole and self._proxy_model:
+            search_text = self._proxy_model.search_text
+            if search_text and search_text.lower() in str(value).lower():
+                return QColor("#505b76" if self._dark_mode else "#ffffb3")
         return None
+
+    def set_dark_mode(self, enabled):
+        self._dark_mode = enabled
+        self.layoutChanged.emit()
 
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:

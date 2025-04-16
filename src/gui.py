@@ -17,6 +17,7 @@ from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QPalette, QColor, QKeySequence
 from logger import setup_logger
 from PyQt5.QtWidgets import QTableView
+from filter_proxy import TableFilterProxyModel
 from table_model import DataTableModel
 from PyQt5.QtCore import QTimer
 from utils import get_save_time_label_text
@@ -34,6 +35,9 @@ class MainWindow(QMainWindow):
         data_manager (Data_Manager): controls how data is saved and loaded.
     """
 
+    proxy_model = TableFilterProxyModel()
+    config = None
+
     def __init__(self, data_manager, version):
         """
         Initiates data manager for user to interact with data.
@@ -48,10 +52,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
-
-        # Todo: keep these from being order dependent
-        self.layout = QVBoxLayout()
-        self.load_data()
 
         # Auto-Save Logic
         self.auto_save_timer = QTimer()
@@ -91,6 +91,10 @@ class MainWindow(QMainWindow):
         # Load user's settings
         self.config = load_config(self.current_profile)
 
+        # Todo: keep these from being order dependent
+        self.layout = QVBoxLayout()
+        self.load_data()
+
         # Theme Selector
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
@@ -103,7 +107,8 @@ class MainWindow(QMainWindow):
         # Data handling
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search data...")
-        self.search_box.textChanged.connect(self.search_data)
+        self.table_view.setModel(self.proxy_model)
+        self.search_box.textChanged.connect(self.proxy_model.set_search_text)
 
         # Add to layout
         self.button = QPushButton("Load Data")
@@ -215,11 +220,17 @@ class MainWindow(QMainWindow):
 
         # Create the model
         self.model = DataTableModel(
-            raw_data, headers, data_manager=self.data_manager
+            raw_data,
+            headers,
+            data_manager=self.data_manager,
+            proxy_model=self.proxy_model,
+            dark_mode=self.config.get("dark_mode", False),
         )
+        self.proxy_model.setSourceModel(self.model)
         self.table_view = QTableView()
         self.table_view.setModel(self.model)
         self.table_view.resizeColumnsToContents()
+        self.table_view.setSortingEnabled(True)
         self.layout.addWidget(self.table_view)
 
     def switch_profile(self):
@@ -263,6 +274,8 @@ class MainWindow(QMainWindow):
         self.config["dark_mode"] = self.theme_selector.currentText() == "Dark"
         save_config(self.config, self.current_profile)
         self.apply_theme()
+        if self.model:
+            self.model.set_dark_mode(self.config["dark_mode"])
         print(
             f"Theme updated for {self.current_profile}"
             + f" to {self.theme_selector.currentText()}"
@@ -290,10 +303,6 @@ class MainWindow(QMainWindow):
             self.setPalette(palette)
         else:
             self.setPalette(QPalette())  # Reset to default light theme
-
-    def search_data(self):
-        query = self.search_box.text()
-        print("Searching for: ", query)
 
     def create_new_profile(self):
         """
