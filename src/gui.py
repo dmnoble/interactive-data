@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QTableView,
     QCheckBox,
     QHeaderView,
+    QApplication,
 )
 from PyQt5.QtCore import Qt, QDateTime, QTimer
 from PyQt5.QtGui import QPalette, QColor, QKeySequence
@@ -23,6 +24,7 @@ from filter_proxy import TableFilterProxyModel
 from table_model import DataTableModel
 from utils import get_save_time_label_text
 from rich_text_delegate import RichTextDelegate
+from view_config import save_view_config, get_all_view_names
 
 logger = setup_logger("gui")
 
@@ -39,6 +41,7 @@ class MainWindow(QMainWindow):
 
     proxy_model = TableFilterProxyModel()
     config = None
+    view_selector = None
 
     def __init__(self, data_manager, version):
         """
@@ -93,10 +96,6 @@ class MainWindow(QMainWindow):
         # Load user's settings
         self.config = load_config(self.current_profile)
 
-        # Todo: keep these from being order dependent
-        self.layout = QVBoxLayout()
-        self.load_data()
-
         # Theme Selector
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
@@ -116,6 +115,19 @@ class MainWindow(QMainWindow):
                 state == Qt.Checked
             )
         )
+
+        # Save View Button
+        self.save_view_button = QPushButton("Save Current View")
+        self.save_view_button.clicked.connect(self.save_current_view)
+
+        # View Loader Dropdown
+        self.view_selector = QComboBox()
+        self.view_selector.setPlaceholderText("Load Saved View")
+        self.view_selector.activated[str].connect(self.load_selected_view)
+
+        # Todo: keep these from being order dependent
+        self.layout = QVBoxLayout()
+        self.load_data()
 
         self.table_view.setModel(self.proxy_model)
         self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
@@ -166,6 +178,10 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.theme_selector)
         self.layout.addWidget(self.search_box)
         self.layout.addWidget(self.case_checkbox)
+        view_layout = QHBoxLayout()
+        view_layout.addWidget(self.save_view_button)
+        view_layout.addWidget(self.view_selector)
+        self.layout.addLayout(view_layout)
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
 
@@ -255,6 +271,9 @@ class MainWindow(QMainWindow):
         self.table_view.setTextElideMode(Qt.ElideRight)
         self.table_view.setSortingEnabled(True)
         self.layout.addWidget(self.table_view)
+
+        # Populate view names at startup
+        self.refresh_view_selector()
 
     def switch_profile(self):
         """
@@ -363,3 +382,63 @@ class MainWindow(QMainWindow):
         self.auto_backup_if_needed()
         self.check_dirty_and_save()
         event.accept()
+
+    def save_current_view(self):
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Save View")
+        dialog.setLabelText("Enter view name:")
+
+        if self.config.get("dark_mode", False):
+            dark_palette = QPalette()
+            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.WindowText, Qt.white)
+            dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
+            dark_palette.setColor(QPalette.Text, Qt.white)
+            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ButtonText, Qt.white)
+            dialog.setPalette(dark_palette)
+        else:
+            dialog.setPalette(
+                QApplication.palette()
+            )  # system default for light
+
+        ok = dialog.exec_()
+        name = dialog.textValue()
+
+        if ok and name:
+            config = {
+                "name": name,
+                "search_text": self.search_box.text(),
+                "case_sensitive": self.case_checkbox.isChecked(),
+                "sort_column": (
+                    self.table_view.horizontalHeader().sortIndicatorSection()
+                ),
+                "ascending": (
+                    self.table_view.horizontalHeader().sortIndicatorOrder()
+                )
+                == Qt.AscendingOrder,
+            }
+
+            save_view_config(name, config)
+            self.refresh_view_selector()
+
+    def load_selected_view(self, name):
+        from view_config import get_view_config
+
+        config = get_view_config(name)
+        if not config:
+            return
+        self.search_box.setText(config.get("search_text", ""))
+        self.case_checkbox.setChecked(config.get("case_sensitive", False))
+        self.table_view.sortByColumn(
+            config.get("sort_column", 0),
+            (
+                Qt.AscendingOrder
+                if config.get("ascending", True)
+                else Qt.DescendingOrder
+            ),
+        )
+
+    def refresh_view_selector(self):
+        self.view_selector.clear()
+        self.view_selector.addItems(get_all_view_names())
