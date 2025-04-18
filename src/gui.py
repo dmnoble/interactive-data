@@ -42,6 +42,8 @@ class MainWindow(QMainWindow):
     proxy_model = TableFilterProxyModel()
     config = None
     view_selector = None
+    field_selector = None
+    model = None
 
     def __init__(self, data_manager, version):
         """
@@ -125,14 +127,29 @@ class MainWindow(QMainWindow):
         self.view_selector.setPlaceholderText("Load Saved View")
         self.view_selector.activated[str].connect(self.load_selected_view)
 
+        # Filter
+        self.field_selector = QComboBox()
+        self.field_selector.setPlaceholderText("Field")
+        self.field_selector.currentTextChanged.connect(
+            self.update_structured_filter
+        )
+        self.operator_selector = QComboBox()
+        self.operator_selector.addItems(["==", "!=", ">", "<", ">=", "<="])
+        self.operator_selector.currentTextChanged.connect(
+            self.update_structured_filter
+        )
+        self.value_input = QLineEdit()
+        self.value_input.setPlaceholderText("Value")
+        self.value_input.textChanged.connect(self.update_structured_filter)
+
         # Todo: keep these from being order dependent
         self.layout = QVBoxLayout()
         self.load_data()
 
+        # Search
         self.table_view.setModel(self.proxy_model)
         self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
         self.search_box.textChanged.connect(self.proxy_model.set_search_text)
-
         # Add to layout
         self.button = QPushButton("Load Data")
         self.button.clicked.connect(self.load_data)
@@ -181,6 +198,11 @@ class MainWindow(QMainWindow):
         view_layout = QHBoxLayout()
         view_layout.addWidget(self.save_view_button)
         view_layout.addWidget(self.view_selector)
+        structured_layout = QHBoxLayout()
+        structured_layout.addWidget(self.field_selector)
+        structured_layout.addWidget(self.operator_selector)
+        structured_layout.addWidget(self.value_input)
+        self.layout.addLayout(structured_layout)
         self.layout.addLayout(view_layout)
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
@@ -245,6 +267,8 @@ class MainWindow(QMainWindow):
 
         # Dynamically get headers from first item (or fallback)
         headers = list(raw_data[0].keys()) if raw_data else []
+        self.field_selector.clear()
+        self.field_selector.addItems(headers)
 
         # Create the model
         self.model = DataTableModel(
@@ -415,8 +439,13 @@ class MainWindow(QMainWindow):
                 ),
                 "ascending": (
                     self.table_view.horizontalHeader().sortIndicatorOrder()
-                )
-                == Qt.AscendingOrder,
+                    == Qt.AscendingOrder
+                ),
+                "filter": {
+                    "field": self.field_selector.currentText(),
+                    "operator": self.operator_selector.currentText(),
+                    "value": self.value_input.text(),
+                },
             }
 
             save_view_config(name, config)
@@ -439,6 +468,19 @@ class MainWindow(QMainWindow):
             ),
         )
 
+        filter_config = config.get("filter", {})
+        self.field_selector.setCurrentText(filter_config.get("field", ""))
+        self.operator_selector.setCurrentText(
+            filter_config.get("operator", "==")
+        )
+        self.value_input.setText(filter_config.get("value", ""))
+
     def refresh_view_selector(self):
         self.view_selector.clear()
         self.view_selector.addItems(get_all_view_names())
+
+    def update_structured_filter(self):
+        field = self.field_selector.currentText()
+        op = self.operator_selector.currentText()
+        value = self.value_input.text()
+        self.proxy_model.set_structured_filter(field, op, value)

@@ -29,6 +29,7 @@ class DataTableModel(QAbstractTableModel):
     redo_stack: list[Action] = []
     unsaved_action_stack: list[Action] = []
     undo_log_path = Path(".undo_log.json")
+    RAW_VALUE_ROLE = Qt.UserRole + 1
 
     def __init__(
         self,
@@ -113,6 +114,10 @@ class DataTableModel(QAbstractTableModel):
             # Default: wrap full text to apply text color even with no match
             text_color = "white" if self._dark_mode else "black"
             return f'<span style="color: {text_color}">{display}</span>'
+
+        if role == self.RAW_VALUE_ROLE:
+            return value  # Return the actual unformatted raw value
+
         return None
 
     def set_dark_mode(self, enabled):
