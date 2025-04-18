@@ -142,6 +142,14 @@ class MainWindow(QMainWindow):
         self.value_input.setPlaceholderText("Value")
         self.value_input.textChanged.connect(self.update_structured_filter)
 
+        self.custom_expr_input = QLineEdit()
+        self.custom_expr_input.setPlaceholderText(
+            "Custom Filter Expression (e.g. status == 'active')"
+        )
+        self.custom_expr_input.textChanged.connect(
+            self.update_custom_filter_expr
+        )
+
         # Todo: keep these from being order dependent
         self.layout = QVBoxLayout()
         self.load_data()
@@ -202,6 +210,7 @@ class MainWindow(QMainWindow):
         structured_layout.addWidget(self.field_selector)
         structured_layout.addWidget(self.operator_selector)
         structured_layout.addWidget(self.value_input)
+        self.layout.addWidget(self.custom_expr_input)
         self.layout.addLayout(structured_layout)
         self.layout.addLayout(view_layout)
         self.layout.addWidget(self.button)
@@ -446,6 +455,7 @@ class MainWindow(QMainWindow):
                     "operator": self.operator_selector.currentText(),
                     "value": self.value_input.text(),
                 },
+                "custom_filter": self.custom_expr_input.text(),
             }
 
             save_view_config(name, config)
@@ -474,6 +484,7 @@ class MainWindow(QMainWindow):
             filter_config.get("operator", "==")
         )
         self.value_input.setText(filter_config.get("value", ""))
+        self.custom_expr_input.setText(config.get("custom_filter", ""))
 
     def refresh_view_selector(self):
         self.view_selector.clear()
@@ -484,3 +495,7 @@ class MainWindow(QMainWindow):
         op = self.operator_selector.currentText()
         value = self.value_input.text()
         self.proxy_model.set_structured_filter(field, op, value)
+
+    def update_custom_filter_expr(self):
+        expr = self.custom_expr_input.text()
+        self.proxy_model.set_custom_filter_expression(expr)

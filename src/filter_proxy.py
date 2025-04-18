@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSortFilterProxyModel, Qt
-
+from asteval import Interpreter
 import operator
 
 OPS = {
@@ -14,6 +14,7 @@ OPS = {
 
 class TableFilterProxyModel(QSortFilterProxyModel):
 
+    asteval_engine = Interpreter()
     structured_filter = {"field": "", "operator": "", "value": ""}
     RAW_VALUE_ROLE = Qt.UserRole + 1
 
@@ -21,6 +22,7 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         super().__init__()
         self.search_text = ""
         self.case_sensitive = False
+        self.custom_expr = ""
 
     def set_search_text(self, text):
         self.search_text = text
@@ -85,6 +87,25 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             if not match_found:
                 return False
 
+        # Step 3: custom expression
+        if self.custom_expr:
+            try:
+                row_dict = {}
+                headers = model._headers
+                for col_index, header in enumerate(headers):
+                    index = model.index(source_row, col_index)
+                    value = model.data(index, self.RAW_VALUE_ROLE)
+                    row_dict[header] = value
+                    self.asteval_engine.symtable.clear()
+                    self.asteval_engine.symtable.update(row_dict)
+                    result = self.asteval_engine(self.custom_expr)
+                if not result:
+                    return False
+            except Exception:
+                # except Exception as e:
+                # print(f"Custom filter error: {e}")
+                return False
+
         return True
 
     def set_structured_filter(self, field, operator_, value):
@@ -96,5 +117,10 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             }
         else:
             self.structured_filter = None
+        self.invalidateFilter()
+        self.layoutChanged.emit()
+
+    def set_custom_filter_expression(self, expr):
+        self.custom_expr = expr.strip()
         self.invalidateFilter()
         self.layoutChanged.emit()

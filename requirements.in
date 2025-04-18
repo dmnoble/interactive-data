@@ -8,3 +8,4 @@ pytest
 PyQt5
 PyQt5-stubs
 pytest-qt
+asteval
