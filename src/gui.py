@@ -150,6 +150,21 @@ class MainWindow(QMainWindow):
             self.update_custom_filter_expr
         )
 
+        # Custom sort
+        self.custom_sort_input = QComboBox()
+        self.custom_sort_input.setEditable(True)
+        self.custom_sort_input.setInsertPolicy(QComboBox.InsertAtTop)
+        # Insert a fake placeholder item
+        placeholder = "Enter Custom Sort Key (e.g. len(name) + priority)"
+        line_edit = self.custom_sort_input.lineEdit()
+        line_edit.setPlaceholderText(placeholder)
+
+        self.apply_sort_button = QPushButton("Apply Custom Sort")
+        self.apply_sort_button.clicked.connect(self.apply_custom_sort)
+
+        self.sort_order_selector = QComboBox()
+        self.sort_order_selector.addItems(["Ascending", "Descending"])
+
         # Todo: keep these from being order dependent
         self.layout = QVBoxLayout()
         self.load_data()
@@ -206,12 +221,15 @@ class MainWindow(QMainWindow):
         view_layout = QHBoxLayout()
         view_layout.addWidget(self.save_view_button)
         view_layout.addWidget(self.view_selector)
+        self.layout.addWidget(self.custom_expr_input)
         structured_layout = QHBoxLayout()
         structured_layout.addWidget(self.field_selector)
         structured_layout.addWidget(self.operator_selector)
         structured_layout.addWidget(self.value_input)
-        self.layout.addWidget(self.custom_expr_input)
         self.layout.addLayout(structured_layout)
+        self.layout.addWidget(self.custom_sort_input)
+        self.layout.addWidget(self.apply_sort_button)
+        self.layout.addWidget(self.sort_order_selector)
         self.layout.addLayout(view_layout)
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
@@ -456,6 +474,7 @@ class MainWindow(QMainWindow):
                     "value": self.value_input.text(),
                 },
                 "custom_filter": self.custom_expr_input.text(),
+                "custom_sort_key": self.custom_sort_input.text(),
             }
 
             save_view_config(name, config)
@@ -486,6 +505,8 @@ class MainWindow(QMainWindow):
         self.value_input.setText(filter_config.get("value", ""))
         self.custom_expr_input.setText(config.get("custom_filter", ""))
 
+        self.custom_sort_input.setText(config.get("custom_sort_key", ""))
+
     def refresh_view_selector(self):
         self.view_selector.clear()
         self.view_selector.addItems(get_all_view_names())
@@ -499,3 +520,22 @@ class MainWindow(QMainWindow):
     def update_custom_filter_expr(self):
         expr = self.custom_expr_input.text()
         self.proxy_model.set_custom_filter_expression(expr)
+
+    def apply_custom_sort(self):
+        expr = self.custom_sort_input.currentText().strip()
+
+        # Skip placeholder
+        if not expr or expr.startswith("Enter Custom Sort"):
+            return
+
+        # This sets sort column to 0 and triggers ascending sort
+        # Which activates proxy's lessThan()ef apply_custom_sort(self):
+        if self.custom_sort_input.findText(expr) == -1:
+            self.custom_sort_input.insertItem(0, expr)
+        self.proxy_model.set_custom_sort_key(expr)
+        sort_order = (
+            Qt.AscendingOrder
+            if self.sort_order_selector.currentText() == "Ascending"
+            else Qt.DescendingOrder
+        )
+        self.table_view.sortByColumn(0, sort_order)

@@ -14,15 +14,28 @@ OPS = {
 
 class TableFilterProxyModel(QSortFilterProxyModel):
 
-    asteval_engine = Interpreter()
-    structured_filter = {"field": "", "operator": "", "value": ""}
     RAW_VALUE_ROLE = Qt.UserRole + 1
 
     def __init__(self):
         super().__init__()
+        self.asteval_engine = Interpreter()
         self.search_text = ""
         self.case_sensitive = False
         self.custom_expr = ""
+        self.structured_filter = {"field": "", "operator": "", "value": ""}
+        self.custom_sort_key = ""
+
+        self.base_symbols = {
+            "len": len,
+            "abs": abs,
+            "min": min,
+            "max": max,
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "round": round,
+        }
 
     def set_search_text(self, text):
         self.search_text = text
@@ -33,6 +46,10 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.case_sensitive = enabled
         self.invalidateFilter()
         self.layoutChanged.emit()
+
+    def set_custom_sort_key(self, expr):
+        self.custom_sort_key = expr.strip()
+        self.invalidate()
 
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()
@@ -124,3 +141,31 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.custom_expr = expr.strip()
         self.invalidateFilter()
         self.layoutChanged.emit()
+
+    def lessThan(self, left, right):
+        model = self.sourceModel()
+
+        row_left = {}
+        row_right = {}
+        headers = model._headers
+        for col_index, header in enumerate(headers):
+            index_left = model.index(left.row(), col_index)
+            index_right = model.index(right.row(), col_index)
+            row_left[header] = model.data(index_left, self.RAW_VALUE_ROLE)
+            row_right[header] = model.data(index_right, self.RAW_VALUE_ROLE)
+
+        if self.custom_sort_key:
+            try:
+                self.asteval_engine.symtable = self.base_symbols.copy()
+                self.asteval_engine.symtable.update(row_left)
+                val_left = self.asteval_engine(self.custom_sort_key)
+
+                self.asteval_engine.symtable = self.base_symbols.copy()
+                self.asteval_engine.symtable.update(row_right)
+                val_right = self.asteval_engine(self.custom_sort_key)
+
+                return val_left < val_right
+            except Exception as e:
+                print(f"Sort expression error: {e}")
+                return False
+        return super().lessThan(left, right)
