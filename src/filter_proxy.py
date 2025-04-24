@@ -119,7 +119,6 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                 if not result:
                     return False
             except Exception:
-                # except Exception as e:
                 # print(f"Custom filter error: {e}")
                 return False
 

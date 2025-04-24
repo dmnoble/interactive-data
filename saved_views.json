@@ -4,6 +4,52 @@
     "search_text": "35",
     "case_sensitive": false,
     "sort_column": 4,
-    "ascending": true
+    "ascending": true,
+    "default": true
+  },
+  "vewName1": {
+    "name": "vewName1",
+    "search_text": "",
+    "case_sensitive": false,
+    "sort_column": 2,
+    "ascending": true,
+    "filter": {
+      "field": "id",
+      "operator": ">",
+      "value": "1"
+    },
+    "custom_filter": "",
+    "custom_sort_key": "",
+    "default": false
+  },
+  "name1": {
+    "name": "name1",
+    "search_text": "",
+    "case_sensitive": false,
+    "sort_column": 2,
+    "ascending": true,
+    "filter": {
+      "field": "id",
+      "operator": ">",
+      "value": "1"
+    },
+    "custom_filter": "",
+    "custom_sort_key": "",
+    "default": false
+  },
+  "tmp2": {
+    "name": "tmp2",
+    "search_text": "35",
+    "case_sensitive": false,
+    "sort_column": 0,
+    "ascending": false,
+    "filter": {
+      "field": "",
+      "operator": "==",
+      "value": ""
+    },
+    "custom_filter": "",
+    "custom_sort_key": "name",
+    "default": false
   }
 }

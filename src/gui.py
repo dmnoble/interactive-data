@@ -24,7 +24,12 @@ from filter_proxy import TableFilterProxyModel
 from table_model import DataTableModel
 from utils import get_save_time_label_text
 from rich_text_delegate import RichTextDelegate
-from view_config import save_view_config, get_all_view_names
+from view_config import (
+    save_view_config,
+    get_all_view_names,
+    get_default_view_name,
+    set_default_view,
+)
 
 logger = setup_logger("gui")
 
@@ -98,6 +103,8 @@ class MainWindow(QMainWindow):
         # Load user's settings
         self.config = load_config(self.current_profile)
 
+        self.layout = QVBoxLayout()
+
         # Theme Selector
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
@@ -126,6 +133,12 @@ class MainWindow(QMainWindow):
         self.view_selector = QComboBox()
         self.view_selector.setPlaceholderText("Load Saved View")
         self.view_selector.activated[str].connect(self.load_selected_view)
+        # Populate view names at startup
+        self.refresh_view_selector()
+
+        # Default view button
+        self.set_default_button = QPushButton("Set as Default View")
+        self.set_default_button.clicked.connect(self.set_default_view)
 
         # Filter
         self.field_selector = QComboBox()
@@ -166,7 +179,6 @@ class MainWindow(QMainWindow):
         self.sort_order_selector.addItems(["Ascending", "Descending"])
 
         # Todo: keep these from being order dependent
-        self.layout = QVBoxLayout()
         self.load_data()
 
         # Search
@@ -221,6 +233,7 @@ class MainWindow(QMainWindow):
         view_layout = QHBoxLayout()
         view_layout.addWidget(self.save_view_button)
         view_layout.addWidget(self.view_selector)
+        view_layout.addWidget(self.set_default_button)
         self.layout.addWidget(self.custom_expr_input)
         structured_layout = QHBoxLayout()
         structured_layout.addWidget(self.field_selector)
@@ -323,8 +336,14 @@ class MainWindow(QMainWindow):
         self.table_view.setSortingEnabled(True)
         self.layout.addWidget(self.table_view)
 
-        # Populate view names at startup
-        self.refresh_view_selector()
+        self.refresh_view_selector()  # make sure the dropdown is populated
+
+        default_view = get_default_view_name()
+        if default_view:
+            self.load_selected_view(default_view)
+            index = self.view_selector.findText(f"{default_view} (default)")
+            if index != -1:
+                self.view_selector.setCurrentIndex(index)
 
     def switch_profile(self):
         """
@@ -474,16 +493,22 @@ class MainWindow(QMainWindow):
                     "value": self.value_input.text(),
                 },
                 "custom_filter": self.custom_expr_input.text(),
-                "custom_sort_key": self.custom_sort_input.text(),
+                "custom_sort_key": self.custom_sort_input.currentText(),
             }
 
             save_view_config(name, config)
             self.refresh_view_selector()
+            index = self.view_selector.findText(name)
+            if index != -1:
+                self.view_selector.setCurrentIndex(index)
 
     def load_selected_view(self, name):
         from view_config import get_view_config
 
-        config = get_view_config(name)
+        cleaned_name = name.replace(" (default)", "")
+        config = get_view_config(cleaned_name)
+
+        config = get_view_config(cleaned_name)
         if not config:
             return
         self.search_box.setText(config.get("search_text", ""))
@@ -505,11 +530,20 @@ class MainWindow(QMainWindow):
         self.value_input.setText(filter_config.get("value", ""))
         self.custom_expr_input.setText(config.get("custom_filter", ""))
 
-        self.custom_sort_input.setText(config.get("custom_sort_key", ""))
+        self.custom_sort_input.setCurrentText(
+            config.get("custom_sort_key", "")
+        )
 
     def refresh_view_selector(self):
+        from view_config import get_default_view_name
+
+        all_views = get_all_view_names()
+        default_name = get_default_view_name()
+
         self.view_selector.clear()
-        self.view_selector.addItems(get_all_view_names())
+        for name in all_views:
+            label = f"{name} (default)" if name == default_name else name
+            self.view_selector.addItem(label)
 
     def update_structured_filter(self):
         field = self.field_selector.currentText()
@@ -539,3 +573,13 @@ class MainWindow(QMainWindow):
             else Qt.DescendingOrder
         )
         self.table_view.sortByColumn(0, sort_order)
+
+    def set_default_view(self):
+        name = self.view_selector.currentText().replace(" (default)", "")
+        if name:
+            set_default_view(name)
+            self.refresh_view_selector()
+            # Ensure the current selection stays highlighted
+            index = self.view_selector.findText(f"{name} (default)")
+            if index != -1:
+                self.view_selector.setCurrentIndex(index)

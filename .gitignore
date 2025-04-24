@@ -13,3 +13,4 @@ backups/
 test_config.json
 test_data.json
 backup_test.json
+saved_views.json

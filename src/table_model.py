@@ -246,8 +246,8 @@ class DataTableModel(QAbstractTableModel):
         msg.setWindowTitle("Recovery Available")
         msg.setText(
             "It looks like the application closed before the last session"
-            + "could autosave.\n\nWould you like to load your most recent"
-            + "unsaved changes?"
+            + " could autosave.\n\nWould you like to load your most recent"
+            + " unsaved changes?"
         )
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         return msg.exec_() == QMessageBox.Yes
