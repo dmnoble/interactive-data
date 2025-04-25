@@ -108,6 +108,27 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                 except Exception:
                     return False  # Fail-safe: exclude row if filtering fails
 
+        # Simple text search handling
+        if self.search_text and not self.custom_expr:
+            column_count = model.columnCount()
+            match_found = False
+            for col in range(column_count):
+                index = model.index(source_row, col)
+                data = model.data(index, Qt.DisplayRole)
+                if data is None:
+                    continue
+                text = str(data)
+                if self.case_sensitive:
+                    if self.search_text in text:
+                        match_found = True
+                        break
+                else:
+                    if self.search_text.lower() in text.lower():
+                        match_found = True
+                        break
+            if not match_found:
+                return False
+
         # Step 2: custom expression
         if self.custom_expr:
             try:

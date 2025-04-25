@@ -151,6 +151,10 @@ class MainWindow(QMainWindow):
         self.value_input.setPlaceholderText("Value")
         self.value_input.textChanged.connect(self.update_structured_filter)
 
+        self.structured_ok_button = QPushButton("OK")
+        self.structured_ok_button.setFixedWidth(40)
+        self.structured_ok_button.clicked.connect(self.apply_structured_filter)
+
         self.custom_expr_input = QLineEdit()
         self.custom_expr_input.setPlaceholderText(
             "Custom Filter Expression (e.g. status == 'active')"
@@ -260,6 +264,7 @@ class MainWindow(QMainWindow):
         structured_layout.addWidget(self.field_selector)
         structured_layout.addWidget(self.operator_selector)
         structured_layout.addWidget(self.value_input)
+        structured_layout.addWidget(self.structured_ok_button)
         self.layout.addLayout(structured_layout)
         self.layout.addWidget(self.custom_sort_input)
         sort_controls_layout = QHBoxLayout()
@@ -584,10 +589,12 @@ class MainWindow(QMainWindow):
         self.proxy_model.set_custom_filter_expression(expr)
 
         # Set search text ONLY if expression is a simple word
-        if expr.isalnum() or " " in expr:
+        if expr and (expr.isdigit() or expr.isalpha()):
             self.proxy_model.set_search_text(expr)
+            self.proxy_model.set_custom_filter_expression("")
         else:
-            self.proxy_model.set_search_text("")  # Disable highlighting
+            self.proxy_model.set_search_text("")
+            self.proxy_model.set_custom_filter_expression(expr)
 
     def apply_custom_sort(self):
         expr = self.custom_sort_input.currentText().strip()
@@ -683,3 +690,42 @@ class MainWindow(QMainWindow):
         )
         msg.setIcon(QMessageBox.NoIcon)  # <- No chime!
         msg.exec_()
+
+    def apply_structured_filter(self):
+        field = self.field_selector.currentText()
+        op = self.operator_selector.currentText()
+        value = self.value_input.text()
+
+        if not field or not op:
+            return
+
+        # Auto-quote strings if needed
+        if (
+            op in ["contains", "startswith", "endswith", "matches", "not"]
+            or not value.isnumeric()
+        ):
+            value = f"'{value}'"
+
+        if op == "contains":
+            expr = f"{value.strip('\'')} in {field}"
+        elif op == "not":
+            expr = f"{value.strip('\'')} not in {field}"
+        elif op == "matches":
+            expr = f"{value.strip('\'')} in {field}"  # simple version
+        elif op == "startswith":
+            expr = f"{field}.startswith({value})"
+        elif op == "endswith":
+            expr = f"{field}.endswith({value})"
+        else:
+            expr = f"{field} {op} {value}"
+
+        # ➡️ Append to existing custom expression if present
+        current_expr = self.custom_expr_input.text().strip()
+
+        if current_expr:
+            combined_expr = f"{current_expr} and {expr}"
+        else:
+            combined_expr = expr
+
+        self.custom_expr_input.setText(combined_expr)
+        self.proxy_model.set_custom_filter_expression(combined_expr)
