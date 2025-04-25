@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QHeaderView,
     QApplication,
+    QMessageBox,
 )
 from PyQt5.QtCore import Qt, QDateTime, QTimer
 from PyQt5.QtGui import QPalette, QColor, QKeySequence
@@ -163,6 +164,20 @@ class MainWindow(QMainWindow):
             self.update_custom_filter_expr
         )
 
+        self.custom_expr_input = QLineEdit()
+        self.custom_expr_input.setPlaceholderText(
+            "Custom Filter Expression (e.g. status == 'active')"
+        )
+        self.custom_expr_input.textChanged.connect(
+            self.update_custom_filter_expr
+        )
+
+        self.custom_expr_help_button = QPushButton("?")
+        self.custom_expr_help_button.setFixedWidth(25)
+        self.custom_expr_help_button.clicked.connect(
+            self.show_filter_expr_help
+        )
+
         # Custom sort
         self.custom_sort_input = QComboBox()
         self.custom_sort_input.setEditable(True)
@@ -177,6 +192,10 @@ class MainWindow(QMainWindow):
 
         self.sort_order_selector = QComboBox()
         self.sort_order_selector.addItems(["Ascending", "Descending"])
+
+        self.custom_sort_help_button = QPushButton("?")
+        self.custom_sort_help_button.setFixedWidth(25)
+        self.custom_sort_help_button.clicked.connect(self.show_sort_expr_help)
 
         # Todo: keep these from being order dependent
         self.load_data()
@@ -235,12 +254,20 @@ class MainWindow(QMainWindow):
         view_layout.addWidget(self.view_selector)
         view_layout.addWidget(self.set_default_button)
         self.layout.addWidget(self.custom_expr_input)
+        custom_expr_layout = QHBoxLayout()
+        custom_expr_layout.addWidget(self.custom_expr_input)
+        custom_expr_layout.addWidget(self.custom_expr_help_button)
+        self.layout.addLayout(custom_expr_layout)
         structured_layout = QHBoxLayout()
         structured_layout.addWidget(self.field_selector)
         structured_layout.addWidget(self.operator_selector)
         structured_layout.addWidget(self.value_input)
         self.layout.addLayout(structured_layout)
         self.layout.addWidget(self.custom_sort_input)
+        custom_sort_layout = QHBoxLayout()
+        custom_sort_layout.addWidget(self.custom_sort_input)
+        custom_sort_layout.addWidget(self.custom_sort_help_button)
+        self.layout.addLayout(custom_sort_layout)
         self.layout.addWidget(self.apply_sort_button)
         self.layout.addWidget(self.sort_order_selector)
         self.layout.addLayout(view_layout)
@@ -616,3 +643,38 @@ class MainWindow(QMainWindow):
             )
         else:
             self.operator_selector.addItems(["==", "!="])  # fallback
+
+    def show_filter_expr_help(self):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Custom Filter Expression Help")
+        msg.setText(
+            "Examples:\n"
+            "  status == 'active'\n"
+            "  priority >= 3 and 'urgent' in tags\n"
+            "  name.startswith('A')\n\n"
+            "You can use:\n"
+            "  - len(x)\n"
+            "  - str(), int(), float()\n"
+            "  - min(), max(), round()\n\n"
+            "Field names (columns) are available as variables.\n"
+            "For example, use 'priority', 'status', 'tags', 'name', etc."
+        )
+        msg.setIcon(QMessageBox.NoIcon)  # <- No chime!
+        msg.exec_()
+
+    def show_sort_expr_help(self):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Custom Sort Key Help")
+        msg.setText(
+            "Examples:\n"
+            "  len(name)\n"
+            "  priority * 2 + score\n"
+            "  int(status == 'active')  # Sort true before false\n\n"
+            "You can use:\n"
+            "  - len(x)\n"
+            "  - str(), int(), float()\n"
+            "  - min(), max(), round()\n\n"
+            "Field names (columns) are available as variables."
+        )
+        msg.setIcon(QMessageBox.NoIcon)  # <- No chime!
+        msg.exec_()
