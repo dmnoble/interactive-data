@@ -77,8 +77,33 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                     else:
                         target_casted = str(target)
 
-                    if not OPS[op](data, target_casted):
-                        return False
+                    # Handle operator logic by type
+                    if isinstance(data, str):
+                        if op == "contains":
+                            if target_casted not in data:
+                                return False
+                        elif op == "startswith":
+                            if not data.startswith(target_casted):
+                                return False
+                        elif op == "endswith":
+                            if not data.endswith(target_casted):
+                                return False
+                        elif op == "matches":
+                            if (
+                                target_casted not in data
+                            ):  # simple match = substring for now
+                                return False
+                        elif op == "not":
+                            if target_casted in data:
+                                return False
+                        else:
+                            return False  # unsupported string op
+
+                    elif op in OPS:
+                        if not OPS[op](data, target_casted):
+                            return False
+                    else:
+                        return False  # unknown op
 
                 except Exception:
                     return False  # Fail-safe: exclude row if filtering fails

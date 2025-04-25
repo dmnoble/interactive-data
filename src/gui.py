@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         self.field_selector = QComboBox()
         self.field_selector.setPlaceholderText("Field")
         self.field_selector.currentTextChanged.connect(
-            self.update_structured_filter
+            self.update_filter_operators
         )
         self.operator_selector = QComboBox()
         self.operator_selector.addItems(["==", "!=", ">", "<", ">=", "<="])
@@ -309,6 +309,7 @@ class MainWindow(QMainWindow):
         headers = list(raw_data[0].keys()) if raw_data else []
         self.field_selector.clear()
         self.field_selector.addItems(headers)
+        self.update_filter_operators()  # Run after headers added
 
         # Create the model
         self.model = DataTableModel(
@@ -524,6 +525,7 @@ class MainWindow(QMainWindow):
 
         filter_config = config.get("filter", {})
         self.field_selector.setCurrentText(filter_config.get("field", ""))
+        self.update_filter_operators()
         self.operator_selector.setCurrentText(
             filter_config.get("operator", "==")
         )
@@ -583,3 +585,34 @@ class MainWindow(QMainWindow):
             index = self.view_selector.findText(f"{name} (default)")
             if index != -1:
                 self.view_selector.setCurrentIndex(index)
+
+    def update_filter_operators(self):
+        if not self.model:
+            return
+
+        field = self.field_selector.currentText()
+
+        sample_value = None
+        headers = self.model._headers
+        if field in headers:
+            col_index = headers.index(field)
+            for row in range(self.model.rowCount()):
+                index = self.model.index(row, col_index)
+                value = self.model.data(index, self.proxy_model.RAW_VALUE_ROLE)
+                if value is not None:
+                    sample_value = value
+                    break
+
+        self.operator_selector.clear()
+
+        if isinstance(sample_value, (int, float)):
+            self.operator_selector.addItems(["==", "!=", "<", "<=", ">", ">="])
+        elif isinstance(sample_value, bool):
+            self.operator_selector.addItems(["==", "!="])
+        elif isinstance(sample_value, str) or sample_value is None:
+            # Default to string if unknown
+            self.operator_selector.addItems(
+                ["contains", "startswith", "endswith", "matches", "not"]
+            )
+        else:
+            self.operator_selector.addItems(["==", "!="])  # fallback
