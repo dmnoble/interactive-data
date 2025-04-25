@@ -108,28 +108,7 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                 except Exception:
                     return False  # Fail-safe: exclude row if filtering fails
 
-        # Step 2: search filter (applies across all columns)
-        if self.search_text:
-            column_count = model.columnCount()
-            match_found = False
-            for col in range(column_count):
-                index = model.index(source_row, col)
-                data = model.data(index, self.RAW_VALUE_ROLE)
-                if data is None:
-                    continue
-                text = str(data)
-                if self.case_sensitive:
-                    if self.search_text in text:
-                        match_found = True
-                        break
-                else:
-                    if self.search_text.lower() in text.lower():
-                        match_found = True
-                        break
-            if not match_found:
-                return False
-
-        # Step 3: custom expression
+        # Step 2: custom expression
         if self.custom_expr:
             try:
                 row_dict = {}
@@ -138,15 +117,25 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                     index = model.index(source_row, col_index)
                     value = model.data(index, self.RAW_VALUE_ROLE)
                     row_dict[header] = value
-                    self.asteval_engine.symtable.clear()
-                    self.asteval_engine.symtable.update(row_dict)
-                    result = self.asteval_engine(self.custom_expr)
+
+                expr = self.custom_expr
+                if not self.case_sensitive:
+                    # Lowercase everything for comparison if case-insensitive
+                    row_dict = {
+                        k: v.lower() if isinstance(v, str) else v
+                        for k, v in row_dict.items()
+                    }
+                    expr = expr.lower()
+
+                self.asteval_engine.symtable.clear()
+                self.asteval_engine.symtable.update(row_dict)
+                result = self.asteval_engine(expr)
+
                 if not result:
                     return False
-            except Exception:
-                # print(f"Custom filter error: {e}")
-                return False
 
+            except Exception:
+                return False
         return True
 
     def set_structured_filter(self, field, operator_, value):

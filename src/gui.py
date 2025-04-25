@@ -85,13 +85,10 @@ class MainWindow(QMainWindow):
 
         # Profile selection dropdown
         self.profile_label = QLabel("Select Profile:")
-        profile_layout = QHBoxLayout()
         self.profile_selector = QComboBox()
         self.update_profile_list()
         self.add_profile_button = QPushButton("Add Profile")
         self.add_profile_button.clicked.connect(self.create_new_profile)
-        profile_layout.addWidget(self.profile_selector)
-        profile_layout.addWidget(self.add_profile_button)
 
         # Check if profiles exist, if not prompt user for a new one
         if not self.profile_selector.count():
@@ -116,8 +113,6 @@ class MainWindow(QMainWindow):
         self.theme_selector.currentIndexChanged.connect(self.update_theme)
 
         # Data handling
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search data...")
         self.case_checkbox = QCheckBox("Case Sensitive")
         self.case_checkbox.setChecked(False)
         self.case_checkbox.stateChanged.connect(
@@ -203,7 +198,6 @@ class MainWindow(QMainWindow):
         # Search
         self.table_view.setModel(self.proxy_model)
         self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
-        self.search_box.textChanged.connect(self.proxy_model.set_search_text)
         # Add to layout
         self.button = QPushButton("Load Data")
         self.button.clicked.connect(self.load_data)
@@ -243,16 +237,20 @@ class MainWindow(QMainWindow):
         # Apply the UI
         self.layout.addLayout(button_layout)
         self.layout.addLayout(combo_layout)
-        self.layout.addWidget(self.profile_label)
+        profile_layout = QHBoxLayout()
+        profile_layout.addWidget(self.add_profile_button)
+        profile_layout.addWidget(self.profile_label)
+        profile_layout.addWidget(self.profile_selector)
         self.layout.addLayout(profile_layout)
-        self.layout.addWidget(self.theme_label)
-        self.layout.addWidget(self.theme_selector)
+        theme_layout = QHBoxLayout()
+        theme_layout.addWidget(self.theme_label)
+        theme_layout.addWidget(self.theme_selector)
+        self.layout.addLayout(theme_layout)
         view_layout = QHBoxLayout()
         view_layout.addWidget(self.save_view_button)
         view_layout.addWidget(self.view_selector)
         view_layout.addWidget(self.set_default_button)
         self.layout.addLayout(view_layout)
-        self.layout.addWidget(self.search_box)
         search_layout = QHBoxLayout()
         search_layout.addWidget(self.custom_expr_input)
         search_layout.addWidget(self.case_checkbox)
@@ -504,7 +502,7 @@ class MainWindow(QMainWindow):
         if ok and name:
             config = {
                 "name": name,
-                "search_text": self.search_box.text(),
+                "search_text": self.custom_expr_input.text(),
                 "case_sensitive": self.case_checkbox.isChecked(),
                 "sort_column": (
                     self.table_view.horizontalHeader().sortIndicatorSection()
@@ -537,8 +535,10 @@ class MainWindow(QMainWindow):
         config = get_view_config(cleaned_name)
         if not config:
             return
-        self.search_box.setText(config.get("search_text", ""))
-        self.proxy_model.set_search_text(self.search_box.text())
+        self.custom_expr_input.setText(config.get("search_text", ""))
+        self.proxy_model.set_custom_filter_expression(
+            self.custom_expr_input.text()
+        )
         self.case_checkbox.setChecked(config.get("case_sensitive", False))
         self.table_view.sortByColumn(
             config.get("sort_column", 0),
@@ -582,6 +582,12 @@ class MainWindow(QMainWindow):
     def update_custom_filter_expr(self):
         expr = self.custom_expr_input.text()
         self.proxy_model.set_custom_filter_expression(expr)
+
+        # Set search text ONLY if expression is a simple word
+        if expr.isalnum() or " " in expr:
+            self.proxy_model.set_search_text(expr)
+        else:
+            self.proxy_model.set_search_text("")  # Disable highlighting
 
     def apply_custom_sort(self):
         expr = self.custom_sort_input.currentText().strip()

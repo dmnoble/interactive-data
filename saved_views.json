@@ -5,11 +5,11 @@
     "case_sensitive": false,
     "sort_column": 4,
     "ascending": true,
+    "custom_filter": "35",
     "default": true
   },
   "vewName1": {
     "name": "vewName1",
-    "search_text": "",
     "case_sensitive": false,
     "sort_column": 2,
     "ascending": true,
@@ -24,7 +24,6 @@
   },
   "name1": {
     "name": "name1",
-    "search_text": "",
     "case_sensitive": false,
     "sort_column": 2,
     "ascending": true,
@@ -39,7 +38,6 @@
   },
   "tmp2": {
     "name": "tmp2",
-    "search_text": "35",
     "case_sensitive": false,
     "sort_column": 0,
     "ascending": false,
@@ -48,7 +46,7 @@
       "operator": "==",
       "value": ""
     },
-    "custom_filter": "",
+    "custom_filter": "35",
     "custom_sort_key": "name",
     "default": false
   }
