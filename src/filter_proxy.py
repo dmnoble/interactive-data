@@ -24,6 +24,7 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.custom_expr = ""
         self.structured_filter = {"field": "", "operator": "", "value": ""}
         self.custom_sort_key = ""
+        self.sort_key_cache = {}  # stores sort key results per row
 
         self.base_symbols = {
             "len": len,
@@ -49,64 +50,10 @@ class TableFilterProxyModel(QSortFilterProxyModel):
 
     def set_custom_sort_key(self, expr):
         self.custom_sort_key = expr.strip()
-        self.invalidate()
+        # self.invalidate()
 
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()
-
-        # Step 1: check structured filter first (if set)
-        if self.structured_filter:
-            field = self.structured_filter.get("field")
-            op = self.structured_filter.get("operator")
-            target = self.structured_filter.get("value")
-
-            if field and op and target:
-                try:
-                    column_index = model._headers.index(field)
-                    index = model.index(source_row, column_index)
-                    data = model.data(index, self.RAW_VALUE_ROLE)
-
-                    if data is None:
-                        return True  # Don't exclude the row
-
-                    # Try to auto-convert target to match data type
-                    if isinstance(data, (int, float)):
-                        target_casted = type(data)(target)
-                    elif isinstance(data, bool):
-                        target_casted = target.lower() in ["true", "1", "yes"]
-                    else:
-                        target_casted = str(target)
-
-                    # Handle operator logic by type
-                    if isinstance(data, str):
-                        if op == "contains":
-                            if target_casted not in data:
-                                return False
-                        elif op == "startswith":
-                            if not data.startswith(target_casted):
-                                return False
-                        elif op == "endswith":
-                            if not data.endswith(target_casted):
-                                return False
-                        elif op == "matches":
-                            if (
-                                target_casted not in data
-                            ):  # simple match = substring for now
-                                return False
-                        elif op == "not":
-                            if target_casted in data:
-                                return False
-                        else:
-                            return False  # unsupported string op
-
-                    elif op in OPS:
-                        if not OPS[op](data, target_casted):
-                            return False
-                    else:
-                        return False  # unknown op
-
-                except Exception:
-                    return False  # Fail-safe: exclude row if filtering fails
 
         # Simple text search handling
         if self.search_text and not self.custom_expr:
@@ -177,29 +124,40 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.layoutChanged.emit()
 
     def lessThan(self, left, right):
-        model = self.sourceModel()
-
-        row_left = {}
-        row_right = {}
-        headers = model._headers
-        for col_index, header in enumerate(headers):
-            index_left = model.index(left.row(), col_index)
-            index_right = model.index(right.row(), col_index)
-            row_left[header] = model.data(index_left, self.RAW_VALUE_ROLE)
-            row_right[header] = model.data(index_right, self.RAW_VALUE_ROLE)
-
         if self.custom_sort_key:
             try:
-                self.asteval_engine.symtable = self.base_symbols.copy()
-                self.asteval_engine.symtable.update(row_left)
-                val_left = self.asteval_engine(self.custom_sort_key)
-
-                self.asteval_engine.symtable = self.base_symbols.copy()
-                self.asteval_engine.symtable.update(row_right)
-                val_right = self.asteval_engine(self.custom_sort_key)
+                val_left = self.sort_key_cache.get(left.row(), None)
+                val_right = self.sort_key_cache.get(right.row(), None)
 
                 return val_left < val_right
             except Exception as e:
                 print(f"Sort expression error: {e}")
                 return False
         return super().lessThan(left, right)
+
+    def rebuild_sort_key_cache(self):
+        self.sort_key_cache.clear()
+        model = self.sourceModel()
+        if not model:
+            return
+
+        headers = model._headers
+        for row in range(model.rowCount()):
+            row_dict = {}
+            for col_index, header in enumerate(headers):
+                index = model.index(row, col_index)
+                value = model.data(index, self.RAW_VALUE_ROLE)
+                row_dict[header] = value
+
+            if self.custom_sort_key:
+                try:
+                    self.asteval_engine.symtable.clear()
+                    # 🛠 First inject built-ins
+                    self.asteval_engine.symtable.update(self.base_symbols)
+                    # 🛠 Then inject row fields
+                    self.asteval_engine.symtable.update(row_dict)
+                    val = self.asteval_engine(self.custom_sort_key)
+                    self.sort_key_cache[row] = val
+                except Exception as e:
+                    print(f"Sort key error at row {row}: {e}")
+                    self.sort_key_cache[row] = ""

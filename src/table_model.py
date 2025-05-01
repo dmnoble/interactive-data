@@ -57,7 +57,7 @@ class DataTableModel(QAbstractTableModel):
                 self.undo_log_path.unlink()
 
         if headers:
-            self._headers = headers
+            self._headers = headers.copy()  # real headers from the loaded data
         else:
             self._headers = (
                 list(self._raw_data[0].keys()) if self._raw_data else []
@@ -68,17 +68,31 @@ class DataTableModel(QAbstractTableModel):
             for item in self._raw_data
         ]
 
+        if "Sort Result" not in self._headers:
+            # 🛠 Inject Sort Result virtual header
+            self._headers.append("Sort Result")
+
+        # 🛠 Inject blank Sort Result field into each data row
+        for row in self._data:
+            row.append("")
+
     def rowCount(self, parent=None):
         return len(self._data)
 
     def columnCount(self, parent=None):
+        if not hasattr(self, "_headers") or self._headers is None:
+            return 0
         return len(self._headers)
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return None
+
         row = index.row()
         col = index.column()
+
+        # If this is a regular column
+
         value = self._data[row][col]
 
         if role == Qt.DisplayRole:
@@ -100,7 +114,7 @@ class DataTableModel(QAbstractTableModel):
                         bg_color = "#505b76" if self._dark_mode else "#ffff00"
                         text_color = "white" if self._dark_mode else "black"
 
-                        # Highlight only match but apply text color to
+                        # Highlight only the match but apply text color to
                         # entire span
                         highlighted = (
                             f'<span style="color: {text_color}">'
@@ -116,7 +130,7 @@ class DataTableModel(QAbstractTableModel):
             return f'<span style="color: {text_color}">{display}</span>'
 
         if role == self.RAW_VALUE_ROLE:
-            return value  # Return the actual unformatted raw value
+            return value  # Actual raw value used for comparisons
 
         return None
 

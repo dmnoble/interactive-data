@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
             -   Data handling such as displaying, filtering, sorting
         """
         super().__init__()
+        self.table_view = QTableView()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
 
@@ -100,7 +101,6 @@ class MainWindow(QMainWindow):
 
         # Load user's settings
         self.config = load_config(self.current_profile)
-
         self.layout = QVBoxLayout()
 
         # Theme Selector
@@ -163,13 +163,9 @@ class MainWindow(QMainWindow):
             self.update_custom_filter_expr
         )
 
-        self.custom_expr_input = QLineEdit()
-        self.custom_expr_input.setPlaceholderText(
-            "Custom Filter Expression (e.g. status == 'active')"
-        )
-        self.custom_expr_input.textChanged.connect(
-            self.update_custom_filter_expr
-        )
+        self.clear_filter_button = QPushButton("Clear")
+        self.clear_filter_button.setFixedWidth(50)
+        self.clear_filter_button.clicked.connect(self.clear_custom_filter)
 
         self.custom_expr_help_button = QPushButton("?")
         self.custom_expr_help_button.setFixedWidth(25)
@@ -185,6 +181,10 @@ class MainWindow(QMainWindow):
         placeholder = "Enter Custom Sort Key (e.g. len(name) + priority)"
         line_edit = self.custom_sort_input.lineEdit()
         line_edit.setPlaceholderText(placeholder)
+
+        self.clear_sort_button = QPushButton("Clear")
+        self.clear_sort_button.setFixedWidth(50)
+        self.clear_sort_button.clicked.connect(self.clear_custom_sort)
 
         self.apply_sort_button = QPushButton("Apply Custom Sort")
         self.apply_sort_button.clicked.connect(self.apply_custom_sort)
@@ -256,6 +256,7 @@ class MainWindow(QMainWindow):
         view_layout.addWidget(self.set_default_button)
         self.layout.addLayout(view_layout)
         search_layout = QHBoxLayout()
+        search_layout.addWidget(self.clear_filter_button)
         search_layout.addWidget(self.custom_expr_input)
         search_layout.addWidget(self.case_checkbox)
         search_layout.addWidget(self.custom_expr_help_button)
@@ -266,12 +267,13 @@ class MainWindow(QMainWindow):
         structured_layout.addWidget(self.value_input)
         structured_layout.addWidget(self.structured_ok_button)
         self.layout.addLayout(structured_layout)
-        self.layout.addWidget(self.custom_sort_input)
-        sort_controls_layout = QHBoxLayout()
-        sort_controls_layout.addWidget(self.sort_order_selector)
-        sort_controls_layout.addWidget(self.apply_sort_button)
-        sort_controls_layout.addWidget(self.custom_sort_help_button)
-        self.layout.addLayout(sort_controls_layout)
+        sort_layout = QHBoxLayout()
+        sort_layout.addWidget(self.clear_sort_button)
+        sort_layout.addWidget(self.custom_sort_input)
+        sort_layout.addWidget(self.sort_order_selector)
+        sort_layout.addWidget(self.apply_sort_button)
+        sort_layout.addWidget(self.custom_sort_help_button)
+        self.layout.addLayout(sort_layout)
         self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
 
@@ -348,7 +350,6 @@ class MainWindow(QMainWindow):
             dark_mode=self.config.get("dark_mode", False),
         )
         self.proxy_model.setSourceModel(self.model)
-        self.table_view = QTableView()
         self.table_view.setModel(self.model)
         # Render HTML in cells — including the fancy
         # substring <span style=...> highlights from search.
@@ -537,7 +538,6 @@ class MainWindow(QMainWindow):
         cleaned_name = name.replace(" (default)", "")
         config = get_view_config(cleaned_name)
 
-        config = get_view_config(cleaned_name)
         if not config:
             return
         self.custom_expr_input.setText(config.get("search_text", ""))
@@ -600,20 +600,34 @@ class MainWindow(QMainWindow):
         expr = self.custom_sort_input.currentText().strip()
 
         # Skip placeholder
-        if not expr or expr.startswith("Enter Custom Sort"):
+        if not expr.startswith("Enter Custom Sort"):
             return
 
-        # This sets sort column to 0 and triggers ascending sort
-        # Which activates proxy's lessThan()ef apply_custom_sort(self):
+        # This sets sort column and triggers ascending sort
+        # Which activates proxy's lessThan()
         if self.custom_sort_input.findText(expr) == -1:
             self.custom_sort_input.insertItem(0, expr)
+
         self.proxy_model.set_custom_sort_key(expr)
+        self.proxy_model.rebuild_sort_key_cache()
+
+        # 🛠 Inject Sort Result values directly into DataTableModel
+        if self.model and self.proxy_model.sort_key_cache:
+            for (
+                proxy_row,
+                sort_value,
+            ) in self.proxy_model.sort_key_cache.items():
+                if 0 <= proxy_row < len(self.model._data):
+                    self.model._data[proxy_row][-1] = str(sort_value)
+
         sort_order = (
             Qt.AscendingOrder
             if self.sort_order_selector.currentText() == "Ascending"
             else Qt.DescendingOrder
         )
-        self.table_view.sortByColumn(0, sort_order)
+        sort_column = self.model.columnCount() - 1
+
+        self.table_view.sortByColumn(sort_column, sort_order)
 
     def set_default_view(self):
         name = self.view_selector.currentText().replace(" (default)", "")
@@ -729,3 +743,29 @@ class MainWindow(QMainWindow):
 
         self.custom_expr_input.setText(combined_expr)
         self.proxy_model.set_custom_filter_expression(combined_expr)
+
+        # ✅ CLEAR structured fields after inserting
+        self.field_selector.setCurrentIndex(-1)
+        self.operator_selector.clear()
+        self.value_input.clear()
+
+    def clear_custom_filter(self):
+        self.custom_expr_input.clear()
+        self.proxy_model.set_custom_filter_expression("")
+        self.proxy_model.set_search_text("")  # reset search text too
+
+    def clear_custom_sort(self):
+        self.custom_sort_input.setCurrentText("")
+        self.proxy_model.set_custom_sort_key("")  # ✅ clears the proxy logic
+        self.proxy_model.sort_key_cache.clear()  # ✅ ensure cache is reset
+
+        # ✅ Clear values from the Sort Result column
+        if self.model:
+            sort_column = self.model.columnCount() - 1
+            for row_index in range(len(self.model._data)):
+                self.model._data[row_index][sort_column] = ""
+                index = self.model.index(row_index, sort_column)
+                self.model.dataChanged.emit(index, index)
+
+        # ✅ Optional: Reset table sort visually
+        self.table_view.sortByColumn(0, Qt.AscendingOrder)

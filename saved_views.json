@@ -1,52 +1,51 @@
 {
-  "\ud83d\udc25 Urgent Stuff": {
-    "name": "\ud83d\udc25 Urgent Stuff",
-    "case_sensitive": false,
-    "sort_column": 4,
-    "ascending": true,
-    "custom_filter": "35",
-    "default": true
-  },
-  "vewName1": {
-    "name": "vewName1",
-    "case_sensitive": false,
-    "sort_column": 2,
-    "ascending": true,
-    "filter": {
-      "field": "id",
-      "operator": ">",
-      "value": "1"
-    },
-    "custom_filter": "",
+  "Simple Search: 🔥 Alice": {
+    "custom_filter": "Alice",
     "custom_sort_key": "",
+    "sort_column": 0,
+    "ascending": true,
     "default": false
   },
-  "name1": {
-    "name": "name1",
-    "case_sensitive": false,
-    "sort_column": 2,
-    "ascending": true,
-    "filter": {
-      "field": "id",
-      "operator": ">",
-      "value": "1"
-    },
-    "custom_filter": "",
+  "Structured Filter: Age >= 25": {
+    "custom_filter": "age >= 25",
     "custom_sort_key": "",
+    "sort_column": 0,
+    "ascending": true,
     "default": false
   },
-  "tmp2": {
-    "name": "tmp2",
-    "case_sensitive": false,
+  "Structured Filter: Name Starts with A or B": {
+    "custom_filter": "name.startswith('A') or name.startswith('B')",
+    "custom_sort_key": "",
+    "sort_column": 0,
+    "ascending": true,
+    "default": false
+  },
+  "Custom Expression: Admin or Moderator Tags": {
+    "custom_filter": "'admin' in tags or 'moderator' in tags",
+    "custom_sort_key": "",
+    "sort_column": 0,
+    "ascending": true,
+    "default": false
+  },
+  "Custom Sort: Len(Name) Descending": {
+    "custom_filter": "",
+    "custom_sort_key": "len(name)",
     "sort_column": 0,
     "ascending": false,
-    "filter": {
-      "field": "",
-      "operator": "==",
-      "value": ""
-    },
-    "custom_filter": "35",
-    "custom_sort_key": "name",
     "default": false
+  },
+  "Filter and Sort Combo: Age 35 Names Sorted by Length": {
+    "custom_filter": "age == 35",
+    "custom_sort_key": "len(name)",
+    "sort_column": 0,
+    "ascending": false,
+    "default": false
+  },
+  "Default View: All Users": {
+    "custom_filter": "id >= 2",
+    "custom_sort_key": "age",
+    "sort_column": 0,
+    "ascending": false,
+    "default": true
   }
 }
