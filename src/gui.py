@@ -600,7 +600,7 @@ class MainWindow(QMainWindow):
         expr = self.custom_sort_input.currentText().strip()
 
         # Skip placeholder
-        if not expr.startswith("Enter Custom Sort"):
+        if not expr or expr.startswith("Enter Custom Sort"):
             return
 
         # This sets sort column and triggers ascending sort
