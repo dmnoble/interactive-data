@@ -8,10 +8,10 @@ from version import __version__
 
 """
 @todo
-    -   Visuals for data (table, details window, etc)
-    -   Handle situation where there is no previous data
-    -   Figure out how to implement the theme if there is no previous
-        profile
+    -   Details window for data
+    -   Data interactions: open link, open file, group data, etc.
+    -   Allow simple text search to be combined with structured
+        filter (Filter: Alice or age == 32)
 """
 
 logger = setup_logger("main")

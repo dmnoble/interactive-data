@@ -6,22 +6,15 @@
     "ascending": true,
     "default": false
   },
-  "Structured Filter: Age >= 25": {
-    "custom_filter": "age >= 25",
+  "Structured Filter: Age >= 50": {
+    "custom_filter": "age >= 50",
     "custom_sort_key": "",
     "sort_column": 0,
     "ascending": true,
     "default": false
   },
-  "Structured Filter: Name Starts with A or B": {
-    "custom_filter": "name.startswith('A') or name.startswith('B')",
-    "custom_sort_key": "",
-    "sort_column": 0,
-    "ascending": true,
-    "default": false
-  },
-  "Custom Expression: Admin or Moderator Tags": {
-    "custom_filter": "'admin' in tags or 'moderator' in tags",
+  "Custom Expression: Tag = 'verified'": {
+    "custom_filter": "'verified' in tags",
     "custom_sort_key": "",
     "sort_column": 0,
     "ascending": true,
@@ -34,18 +27,39 @@
     "ascending": false,
     "default": false
   },
-  "Filter and Sort Combo: Age 35 Names Sorted by Length": {
-    "custom_filter": "age == 35",
-    "custom_sort_key": "len(name)",
+  "Sort by Email Domain (reverse)": {
+    "custom_filter": "",
+    "custom_sort_key": "email.split('@')[-1]",
     "sort_column": 0,
     "ascending": false,
     "default": false
   },
-  "Default View: All Users": {
-    "custom_filter": "id >= 2",
+  "Filter + Sort: Archived Users Sorted by Age": {
+    "custom_filter": "'archived' in tags",
     "custom_sort_key": "age",
     "sort_column": 0,
-    "ascending": false,
+    "ascending": true,
+    "default": false
+  },
+  "Filter Combo: Admin & Moderator": {
+    "custom_filter": "'admin' in tags and 'moderator' in tags",
+    "custom_sort_key": "",
+    "sort_column": 0,
+    "ascending": true,
+    "default": false
+  },
+  "Full Combo: Age < 40 Sorted by Len(Email)": {
+    "custom_filter": "age < 40",
+    "custom_sort_key": "len(email)",
+    "sort_column": 0,
+    "ascending": true,
+    "default": false
+  },
+  "Default View: All Active Users": {
+    "custom_filter": "id > 0",
+    "custom_sort_key": "age",
+    "sort_column": 0,
+    "ascending": true,
     "default": true
   }
 }

@@ -155,6 +155,7 @@ class MainWindow(QMainWindow):
         self.structured_ok_button.setFixedWidth(40)
         self.structured_ok_button.clicked.connect(self.apply_structured_filter)
 
+        self.custom_expr_label = QLabel("Filter: ")
         self.custom_expr_input = QLineEdit()
         self.custom_expr_input.setPlaceholderText(
             "Custom Filter Expression (e.g. status == 'active')"
@@ -182,6 +183,7 @@ class MainWindow(QMainWindow):
         line_edit = self.custom_sort_input.lineEdit()
         line_edit.setPlaceholderText(placeholder)
 
+        self.sort_label = QLabel("Sort: ")
         self.clear_sort_button = QPushButton("Clear")
         self.clear_sort_button.setFixedWidth(50)
         self.clear_sort_button.clicked.connect(self.clear_custom_sort)
@@ -200,7 +202,6 @@ class MainWindow(QMainWindow):
         self.load_data()
 
         # Search
-        self.table_view.setModel(self.proxy_model)
         self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
         # Add to layout
         self.button = QPushButton("Load Data")
@@ -257,6 +258,7 @@ class MainWindow(QMainWindow):
         self.layout.addLayout(view_layout)
         search_layout = QHBoxLayout()
         search_layout.addWidget(self.clear_filter_button)
+        search_layout.addWidget(self.custom_expr_label)
         search_layout.addWidget(self.custom_expr_input)
         search_layout.addWidget(self.case_checkbox)
         search_layout.addWidget(self.custom_expr_help_button)
@@ -269,6 +271,7 @@ class MainWindow(QMainWindow):
         self.layout.addLayout(structured_layout)
         sort_layout = QHBoxLayout()
         sort_layout.addWidget(self.clear_sort_button)
+        sort_layout.addWidget(self.sort_label)
         sort_layout.addWidget(self.custom_sort_input)
         sort_layout.addWidget(self.sort_order_selector)
         sort_layout.addWidget(self.apply_sort_button)
@@ -350,7 +353,8 @@ class MainWindow(QMainWindow):
             dark_mode=self.config.get("dark_mode", False),
         )
         self.proxy_model.setSourceModel(self.model)
-        self.table_view.setModel(self.model)
+        self.table_view.setModel(self.proxy_model)
+        self.table_view.setSortingEnabled(True)
         # Render HTML in cells — including the fancy
         # substring <span style=...> highlights from search.
         self.table_view.setItemDelegate(RichTextDelegate())
@@ -363,7 +367,6 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
         self.table_view.setWordWrap(False)
         self.table_view.setTextElideMode(Qt.ElideRight)
-        self.table_view.setSortingEnabled(True)
         self.layout.addWidget(self.table_view)
 
         self.refresh_view_selector()  # make sure the dropdown is populated
@@ -371,6 +374,11 @@ class MainWindow(QMainWindow):
         default_view = get_default_view_name()
         if default_view:
             self.load_selected_view(default_view)
+
+            # 🛠 Force Apply Sort logic on startup
+            expr = self.custom_sort_input.currentText().strip()
+            if expr:
+                self.apply_custom_sort()
             index = self.view_selector.findText(f"{default_view} (default)")
             if index != -1:
                 self.view_selector.setCurrentIndex(index)
@@ -540,19 +548,12 @@ class MainWindow(QMainWindow):
 
         if not config:
             return
+
         self.custom_expr_input.setText(config.get("search_text", ""))
         self.proxy_model.set_custom_filter_expression(
             self.custom_expr_input.text()
         )
         self.case_checkbox.setChecked(config.get("case_sensitive", False))
-        self.table_view.sortByColumn(
-            config.get("sort_column", 0),
-            (
-                Qt.AscendingOrder
-                if config.get("ascending", True)
-                else Qt.DescendingOrder
-            ),
-        )
 
         filter_config = config.get("filter", {})
         self.field_selector.setCurrentText(filter_config.get("field", ""))
@@ -563,9 +564,31 @@ class MainWindow(QMainWindow):
         self.value_input.setText(filter_config.get("value", ""))
         self.custom_expr_input.setText(config.get("custom_filter", ""))
 
-        self.custom_sort_input.setCurrentText(
-            config.get("custom_sort_key", "")
-        )
+        sort_expr = config.get("custom_sort_key", "").strip()
+        self.custom_sort_input.setCurrentText(sort_expr)
+
+        # ✅ Apply sort logic here if a key exists
+        if sort_expr:
+            self.apply_custom_sort()
+
+        # ✅ Visually apply saved sort direction (fallback)
+        if "ascending" in config:
+            sort_column = self.model.columnCount() - 1
+            sort_order = (
+                Qt.AscendingOrder
+                if config["ascending"]
+                else Qt.DescendingOrder
+            )
+            self.table_view.sortByColumn(sort_column, sort_order)
+            self.table_view.horizontalHeader().setSortIndicatorShown(True)
+            self.table_view.horizontalHeader().setSortIndicator(
+                sort_column, sort_order
+            )
+
+        # ✅ Mark selection in dropdown
+        index = self.view_selector.findText(name)
+        if index != -1:
+            self.view_selector.setCurrentIndex(index)
 
     def refresh_view_selector(self):
         from view_config import get_default_view_name
@@ -611,7 +634,7 @@ class MainWindow(QMainWindow):
         self.proxy_model.set_custom_sort_key(expr)
         self.proxy_model.rebuild_sort_key_cache()
 
-        # 🛠 Inject Sort Result values directly into DataTableModel
+        # 🛠 Inject sort result values directly into DataTableModel
         if self.model and self.proxy_model.sort_key_cache:
             for (
                 proxy_row,
@@ -682,6 +705,7 @@ class MainWindow(QMainWindow):
             "  - len(x)\n"
             "  - str(), int(), float()\n"
             "  - min(), max(), round()\n\n"
+            "Operators: ==, !=, <, >, <=, >=, in, and, or, not\n\n"
             "Field names (columns) are available as variables.\n"
             "For example, use 'priority', 'status', 'tags', 'name', etc."
         )
@@ -695,7 +719,9 @@ class MainWindow(QMainWindow):
             "Examples:\n"
             "  len(name)\n"
             "  priority * 2 + score\n"
-            "  int(status == 'active')  # Sort true before false\n\n"
+            "  int(status == 'active')  # Sort true before false\n"
+            "  email.split('@')[-1]  # Splits after @: at1@one.com ->"
+            " one.com\n\n"
             "You can use:\n"
             "  - len(x)\n"
             "  - str(), int(), float()\n"
@@ -743,6 +769,12 @@ class MainWindow(QMainWindow):
 
         self.custom_expr_input.setText(combined_expr)
         self.proxy_model.set_custom_filter_expression(combined_expr)
+
+        # Reset sort to original order if no sort key is active
+        if not self.proxy_model.custom_sort_key:
+            self.table_view.horizontalHeader().setSortIndicator(
+                -1, Qt.AscendingOrder
+            )
 
         # ✅ CLEAR structured fields after inserting
         self.field_selector.setCurrentIndex(-1)

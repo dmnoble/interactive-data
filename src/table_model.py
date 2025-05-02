@@ -68,11 +68,11 @@ class DataTableModel(QAbstractTableModel):
             for item in self._raw_data
         ]
 
-        if "Sort Result" not in self._headers:
-            # 🛠 Inject Sort Result virtual header
-            self._headers.append("Sort Result")
+        if "sort result" not in self._headers:
+            # 🛠 Inject sort result virtual header
+            self._headers.append("sort result")
 
-        # 🛠 Inject blank Sort Result field into each data row
+        # 🛠 Inject blank sort result field into each data row
         for row in self._data:
             row.append("")
 

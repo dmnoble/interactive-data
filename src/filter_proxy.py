@@ -124,16 +124,22 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.layoutChanged.emit()
 
     def lessThan(self, left, right):
-        if self.custom_sort_key:
-            try:
-                val_left = self.sort_key_cache.get(left.row(), None)
-                val_right = self.sort_key_cache.get(right.row(), None)
+        model = self.sourceModel()
+        left_val = model.data(left, model.RAW_VALUE_ROLE)
+        right_val = model.data(right, model.RAW_VALUE_ROLE)
 
+        if self.custom_sort_key:
+            val_left = self.sort_key_cache.get(left.row(), "")
+            val_right = self.sort_key_cache.get(right.row(), "")
+            try:
                 return val_left < val_right
-            except Exception as e:
-                print(f"Sort expression error: {e}")
+            except Exception:
                 return False
-        return super().lessThan(left, right)
+
+        try:
+            return left_val < right_val
+        except Exception:
+            return False
 
     def rebuild_sort_key_cache(self):
         self.sort_key_cache.clear()

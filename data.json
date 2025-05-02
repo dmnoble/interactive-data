@@ -2,44 +2,286 @@
   {
     "id": 1,
     "name": "Alice",
-    "age": 35,
-    "email": "alice@example.com",
-    "last_accessed": "2023-11-15",
-    "tags": [
-      "admin",
-      "verified"
-    ],
+    "age": 38,
+    "email": "alice@domain.net",
+    "last_accessed": "2023-04-06",
+    "tags": [],
     "preferences": {
-      "theme": "dark",
+      "theme": "light",
       "notifications": true
     }
   },
   {
     "id": 2,
     "name": "Bob",
-    "age": 25,
-    "email": "bob@example.com",
-    "last_accessed": "2024-02-10",
+    "age": 58,
+    "email": "bob@service.org",
+    "last_accessed": "2025-02-02",
     "tags": [
-      "user"
+      "admin",
+      "new"
     ],
     "preferences": {
       "theme": "light",
-      "notifications": false
+      "notifications": true
     }
   },
   {
     "id": 3,
     "name": "Charlie",
-    "age": 35,
-    "email": "charlie@example.com",
-    "last_accessed": "2022-08-05",
+    "age": 42,
+    "email": "charlie@service.org",
+    "last_accessed": "2025-04-05",
     "tags": [
-      "moderator",
-      "premium"
+      "admin",
+      "verified",
+      "moderator"
     ],
     "preferences": {
-      "theme": "dark",
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 4,
+    "name": "Diana",
+    "age": 57,
+    "email": "diana@example.com",
+    "last_accessed": "2024-10-06",
+    "tags": [
+      "moderator",
+      "archived"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 5,
+    "name": "Eli",
+    "age": 23,
+    "email": "eli@service.org",
+    "last_accessed": "2023-06-25",
+    "tags": [
+      "archived"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 6,
+    "name": "Franklin",
+    "age": 22,
+    "email": "franklin@domain.net",
+    "last_accessed": "2024-07-04",
+    "tags": [
+      "premium",
+      "user"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 7,
+    "name": "Grace",
+    "age": 41,
+    "email": "grace@example.com",
+    "last_accessed": "2023-12-24",
+    "tags": [],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 8,
+    "name": "Hank",
+    "age": 60,
+    "email": "hank@app.dev",
+    "last_accessed": "2023-03-12",
+    "tags": [
+      "verified",
+      "beta",
+      "user"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 9,
+    "name": "Ivy",
+    "age": 38,
+    "email": "ivy@app.dev",
+    "last_accessed": "2024-11-18",
+    "tags": [],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 10,
+    "name": "Jack",
+    "age": 53,
+    "email": "jack@domain.net",
+    "last_accessed": "2024-02-08",
+    "tags": [],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 11,
+    "name": "Kira",
+    "age": 47,
+    "email": "kira@company.co",
+    "last_accessed": "2025-04-10",
+    "tags": [
+      "verified"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 12,
+    "name": "Liam",
+    "age": 38,
+    "email": "liam@domain.net",
+    "last_accessed": "2023-10-14",
+    "tags": [
+      "archived",
+      "verified",
+      "beta"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 13,
+    "name": "Mia",
+    "age": 36,
+    "email": "mia@company.co",
+    "last_accessed": "2023-06-19",
+    "tags": [],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 14,
+    "name": "Nate",
+    "age": 57,
+    "email": "nate@company.co",
+    "last_accessed": "2022-11-15",
+    "tags": [
+      "new",
+      "moderator"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 15,
+    "name": "Opal",
+    "age": 51,
+    "email": "opal@company.co",
+    "last_accessed": "2025-04-12",
+    "tags": [
+      "new",
+      "moderator",
+      "user"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 16,
+    "name": "Quinn",
+    "age": 51,
+    "email": "quinn@company.co",
+    "last_accessed": "2024-03-15",
+    "tags": [
+      "admin",
+      "beta",
+      "moderator"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 17,
+    "name": "Rosa",
+    "age": 45,
+    "email": "rosa@example.com",
+    "last_accessed": "2024-12-17",
+    "tags": [
+      "verified",
+      "beta",
+      "new"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 18,
+    "name": "Sam",
+    "age": 32,
+    "email": "sam@service.org",
+    "last_accessed": "2023-09-28",
+    "tags": [],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 19,
+    "name": "Tina",
+    "age": 25,
+    "email": "tina@app.dev",
+    "last_accessed": "2023-11-26",
+    "tags": [
+      "premium",
+      "new",
+      "verified"
+    ],
+    "preferences": {
+      "theme": "light",
+      "notifications": true
+    }
+  },
+  {
+    "id": 20,
+    "name": "Uma",
+    "age": 22,
+    "email": "uma@company.co",
+    "last_accessed": "2024-05-05",
+    "tags": [
+      "beta"
+    ],
+    "preferences": {
+      "theme": "light",
       "notifications": true
     }
   }
