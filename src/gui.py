@@ -571,19 +571,26 @@ class MainWindow(QMainWindow):
         if sort_expr:
             self.apply_custom_sort()
 
-        # ✅ Visually apply saved sort direction (fallback)
-        if "ascending" in config:
-            sort_column = self.model.columnCount() - 1
-            sort_order = (
-                Qt.AscendingOrder
-                if config["ascending"]
-                else Qt.DescendingOrder
-            )
-            self.table_view.sortByColumn(sort_column, sort_order)
-            self.table_view.horizontalHeader().setSortIndicatorShown(True)
-            self.table_view.horizontalHeader().setSortIndicator(
-                sort_column, sort_order
-            )
+            # ✅ Visually apply saved sort direction (fallback)
+            if "ascending" in config:
+                sort_column = self.model.columnCount() - 1
+                sort_order = (
+                    Qt.AscendingOrder
+                    if config["ascending"]
+                    else Qt.DescendingOrder
+                )
+                self.table_view.sortByColumn(sort_column, sort_order)
+                self.table_view.horizontalHeader().setSortIndicatorShown(True)
+                self.table_view.horizontalHeader().setSortIndicator(
+                    sort_column, sort_order
+                )
+                if config.get("ascending", True):
+                    self.sort_order_selector.setCurrentText("Ascending")
+                else:
+                    self.sort_order_selector.setCurrentText("Descending")
+
+        if not sort_expr:
+            self.clear_custom_sort()
 
         # ✅ Mark selection in dropdown
         index = self.view_selector.findText(name)
@@ -716,17 +723,18 @@ class MainWindow(QMainWindow):
         msg = QMessageBox(self)
         msg.setWindowTitle("Custom Sort Key Help")
         msg.setText(
-            "Examples:\n"
-            "  len(name)\n"
-            "  priority * 2 + score\n"
-            "  int(status == 'active')  # Sort true before false\n"
-            "  email.split('@')[-1]  # Splits after @: at1@one.com ->"
-            " one.com\n\n"
+            "Examples of custom sort key expressions:\n\n"
+            "- age\n"
+            "- len(name)\n"
+            "- len(tags)\n"
+            "- email.split('@')[-1]\n"
+            "- name.lower()\n"
+            "- 'admin' in tags\n\n"
             "You can use:\n"
-            "  - len(x)\n"
-            "  - str(), int(), float()\n"
-            "  - min(), max(), round()\n\n"
-            "Field names (columns) are available as variables."
+            "- len(), str.lower(), str.split(), basic math (+ - * /)\n"
+            "- Boolean logic: and, or, not\n"
+            "- Access list/dict fields like tags or preferences"
+            "['notifications']"
         )
         msg.setIcon(QMessageBox.NoIcon)  # <- No chime!
         msg.exec_()
@@ -798,6 +806,8 @@ class MainWindow(QMainWindow):
                 self.model._data[row_index][sort_column] = ""
                 index = self.model.index(row_index, sort_column)
                 self.model.dataChanged.emit(index, index)
+
+        self.sort_order_selector.setCurrentText("Ascending")
 
         # ✅ Optional: Reset table sort visually
         self.table_view.sortByColumn(0, Qt.AscendingOrder)

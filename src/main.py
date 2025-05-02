@@ -12,6 +12,7 @@ from version import __version__
     -   Data interactions: open link, open file, group data, etc.
     -   Allow simple text search to be combined with structured
         filter (Filter: Alice or age == 32)
+    -   Configuration for data input page
 """
 
 logger = setup_logger("main")
