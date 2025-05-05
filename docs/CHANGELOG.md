@@ -4,7 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] - 2024-04-13
+## [1.4.0] - 2024-05-03
+
+### ✨ Added
+- Saved filter and sort view configurations per user profile
+- GUI dropdown to select, apply, and manage saved views
+- Support for setting a default view that loads with profile
+- Case-insensitive text search across all visible columns
+- User-defined filter expressions (e.g. `status == 'active' and tag == 'urgent'`)
+- Ascending/descending sort toggles per column
+- Field-based structured filter support (e.g. tag == 'review')
+
+### 🧪 Tests
+- Unit tests for saved view loading, saving, and default assignment
+- Evaluation of user-defined filter expressions
+- GUI integration tests for applying and clearing views
+
+### 🛠 Internal
+- Filter/sort state stored in `saved_views.json` under profile directory
+- Filter engine isolated for expression reuse and testing
+
+## [1.3.0] - 2024-04-13
 ### Added
 - Undo/Redo support for table edits using keyboard (Ctrl+Z/Ctrl+Y) and GUI buttons.
 - Pull-down lists of undoable and redoable actions shown in real time.
@@ -19,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Switching profiles now triggers a safe save and log cleanup.
 
 
-## [1.4.0] - 2024-04-03
+## [1.2.0] - 2024-04-03
 ### Added
 - Editable QTableView connected to real user data
 - Auto-saving every 5 minutes using a dirty flag system

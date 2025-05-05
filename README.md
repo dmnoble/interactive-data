@@ -50,6 +50,9 @@ python main.py
 - Undo/Redo support for table edits via keyboard and GUI buttons.
 - Pull-down GUI view of undoable/redoable action history.
 - Crash recovery with auto-reload of unsaved actions.
+- Saved filters and sort configurations per user profile
+- Default views load on startup per profile settings
+- Supports user-defined Python-like expressions to filter data
 
 ## ⚙ Usage
 
