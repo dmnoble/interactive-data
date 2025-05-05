@@ -754,12 +754,13 @@ class MainWindow(QMainWindow):
         ):
             value = f"'{value}'"
 
+        clean_value = value.strip("'")
         if op == "contains":
-            expr = f"{value.strip('\'')} in {field}"
+            expr = f"{clean_value} in {field}"
         elif op == "not":
-            expr = f"{value.strip('\'')} not in {field}"
+            expr = f"{clean_value} not in {field}"
         elif op == "matches":
-            expr = f"{value.strip('\'')} in {field}"  # simple version
+            expr = f"{clean_value} in {field}"  # simple version
         elif op == "startswith":
             expr = f"{field}.startswith({value})"
         elif op == "endswith":
