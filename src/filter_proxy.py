@@ -133,7 +133,12 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             val_right = self.sort_key_cache.get(right.row(), "")
             try:
                 return val_left < val_right
-            except Exception:
+            except SyntaxError as e:
+                print(f"Custom filter syntax error: {e}")
+                print(f"Expression was: {self.custom_sort_key}")
+                return False
+            except Exception as e:
+                print(f"Custom filter evaluation error: {e}")
                 return False
 
         try:
@@ -162,7 +167,15 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                     self.asteval_engine.symtable.update(self.base_symbols)
                     # 🛠 Then inject row fields
                     self.asteval_engine.symtable.update(row_dict)
-                    val = self.asteval_engine(self.custom_sort_key)
+                    try:
+                        val = self.asteval_engine(self.custom_sort_key)
+                    except SyntaxError as e:
+                        print(f"Custom filter syntax error: {e}")
+                        print(f"Expression was: {self.custom_sort_key}")
+                        return False
+                    except Exception as e:
+                        print(f"Custom filter evaluation error: {e}")
+                        return False
                     self.sort_key_cache[row] = val
                 except Exception as e:
                     print(f"Sort key error at row {row}: {e}")

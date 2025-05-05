@@ -13,6 +13,14 @@ from version import __version__
     -   Allow simple text search to be combined with structured
         filter (Filter: Alice or age == 32)
     -   Configuration for data input page
+@bug
+    -   Putting in an incorrect sort key, sort results to show
+        None, then Apply Custom Sort doesn't work until the Clear
+        button is selected
+    -   When putting in an incorrect or incomplete equation
+        for filtering, the table goes blank and several
+        repeats of this error comes up
+            SyntaxError: invalid syntax (<unknown>, line 1)
 """
 
 logger = setup_logger("main")
