@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
     view_selector = None
     field_selector = None
     model = None
+    current_profile = ""
 
     def __init__(self, data_manager, version):
         """
@@ -94,26 +95,33 @@ class MainWindow(QMainWindow):
         # Check if profiles exist, if not prompt user for a new one
         if not self.profile_selector.count():
             self.create_new_profile()
-        self.current_profile = self.profile_selector.currentText()
 
-        # Set function call in response to changing profile selection
+        # Connect profile selection change
         self.profile_selector.currentIndexChanged.connect(self.switch_profile)
-
-        # Load user's settings
-        self.config = load_config(self.current_profile)
-        self.layout = QVBoxLayout()
 
         # Theme Selector
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
         self.theme_selector.addItems(["Light", "Dark"])
-        self.theme_selector.setCurrentText(
-            "Dark" if self.config.get("dark_mode", False) else "Light"
-        )
         self.theme_selector.currentIndexChanged.connect(self.update_theme)
 
-        # Data handling
+        self.view_selector = QComboBox()
+        self.field_selector = QComboBox()
+        self.custom_expr_input = QLineEdit()
         self.case_checkbox = QCheckBox("Case Sensitive")
+        self.operator_selector = QComboBox()
+        self.value_input = QLineEdit()
+        self.custom_sort_input = QComboBox()
+        self.sort_order_selector = QComboBox()
+        self.undo_history_combo = QComboBox()
+        self.redo_history_combo = QComboBox()
+
+        # Generates self.model but requires elements initiated
+        # along with populated theme and profile selectors
+        self.switch_profile()
+        self.layout = QVBoxLayout()
+
+        # Data handling
         self.case_checkbox.setChecked(False)
         self.case_checkbox.stateChanged.connect(
             lambda state: self.proxy_model.set_case_sensitive(
@@ -126,7 +134,6 @@ class MainWindow(QMainWindow):
         self.save_view_button.clicked.connect(self.save_current_view)
 
         # View Loader Dropdown
-        self.view_selector = QComboBox()
         self.view_selector.setPlaceholderText("Load Saved View")
         self.view_selector.activated[str].connect(self.load_selected_view)
         # Populate view names at startup
@@ -137,17 +144,14 @@ class MainWindow(QMainWindow):
         self.set_default_button.clicked.connect(self.set_default_view)
 
         # Filter
-        self.field_selector = QComboBox()
         self.field_selector.setPlaceholderText("Field")
         self.field_selector.currentTextChanged.connect(
             self.update_filter_operators
         )
-        self.operator_selector = QComboBox()
         self.operator_selector.addItems(["==", "!=", ">", "<", ">=", "<="])
         self.operator_selector.currentTextChanged.connect(
             self.update_structured_filter
         )
-        self.value_input = QLineEdit()
         self.value_input.setPlaceholderText("Value")
         self.value_input.textChanged.connect(self.update_structured_filter)
 
@@ -156,7 +160,6 @@ class MainWindow(QMainWindow):
         self.structured_ok_button.clicked.connect(self.apply_structured_filter)
 
         self.custom_expr_label = QLabel("Filter: ")
-        self.custom_expr_input = QLineEdit()
         self.custom_expr_input.setPlaceholderText(
             "Custom Filter Expression (e.g. status == 'active')"
         )
@@ -175,7 +178,6 @@ class MainWindow(QMainWindow):
         )
 
         # Custom sort
-        self.custom_sort_input = QComboBox()
         self.custom_sort_input.setEditable(True)
         self.custom_sort_input.setInsertPolicy(QComboBox.InsertAtTop)
         # Insert a fake placeholder item
@@ -191,21 +193,18 @@ class MainWindow(QMainWindow):
         self.apply_sort_button = QPushButton("Apply Custom Sort")
         self.apply_sort_button.clicked.connect(self.apply_custom_sort)
 
-        self.sort_order_selector = QComboBox()
         self.sort_order_selector.addItems(["Ascending", "Descending"])
 
         self.custom_sort_help_button = QPushButton("?")
         self.custom_sort_help_button.setFixedWidth(25)
         self.custom_sort_help_button.clicked.connect(self.show_sort_expr_help)
 
-        # Todo: keep these from being order dependent
-        self.load_data()
-
         # Search
         self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
-        # Add to layout
-        self.button = QPushButton("Load Data")
-        self.button.clicked.connect(self.load_data)
+
+        # Undo/Redo history pulldown
+        self.undo_history_combo.setPlaceholderText("Undo History")
+        self.redo_history_combo.setPlaceholderText("Redo History")
 
         # Undo Redo
         # Add buttons:
@@ -225,12 +224,6 @@ class MainWindow(QMainWindow):
         undo_shortcut.activated.connect(self.model.undo)
         redo_shortcut.activated.connect(self.model.redo)
 
-        # Undo/Redo history pulldown
-        self.undo_history_combo = QComboBox()
-        self.redo_history_combo = QComboBox()
-        self.undo_history_combo.setPlaceholderText("Undo History")
-        self.redo_history_combo.setPlaceholderText("Redo History")
-
         # Add to layout (next to undo/redo buttons):
         combo_layout = QHBoxLayout()
         combo_layout.addWidget(self.undo_history_combo)
@@ -240,6 +233,7 @@ class MainWindow(QMainWindow):
         self.model.stack_changed.connect(self.update_undo_redo_history)
 
         # Apply the UI
+        self.layout.addWidget(self.table_view)
         self.layout.addLayout(button_layout)
         self.layout.addLayout(combo_layout)
         profile_layout = QHBoxLayout()
@@ -277,7 +271,6 @@ class MainWindow(QMainWindow):
         sort_layout.addWidget(self.apply_sort_button)
         sort_layout.addWidget(self.custom_sort_help_button)
         self.layout.addLayout(sort_layout)
-        self.layout.addWidget(self.button)
         self.layout.addWidget(self.save_label)
 
         # Footer layout for version info
@@ -301,7 +294,7 @@ class MainWindow(QMainWindow):
         if self.model and self.model.is_dirty():
             try:
                 data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_data(data)
+                self.data_manager.save_data(data, self.current_profile)
                 self.last_save_time = QDateTime.currentDateTime()
                 self.model.mark_clean()
 
@@ -323,20 +316,19 @@ class MainWindow(QMainWindow):
         if self.model and self.model.is_backup_dirty():
             try:
                 data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_backup(data)
+                self.data_manager.save_backup(data, self.current_profile)
                 self.model.mark_backup_clean()
             except Exception as e:
                 print("Auto-backup failed:", e)
 
-    def load_data(self):
+    def set_model(self):
         """
-        Response to user selecting to load data
 
         Returns:
             dict: The data loaded from  profile data file.
         """
         # Load real data from DataManager
-        raw_data = self.data_manager.load_data()
+        raw_data = self.data_manager.load_data(self.current_profile)
 
         # Dynamically get headers from first item (or fallback)
         headers = list(raw_data[0].keys()) if raw_data else []
@@ -367,11 +359,10 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
         self.table_view.setWordWrap(False)
         self.table_view.setTextElideMode(Qt.ElideRight)
-        self.layout.addWidget(self.table_view)
 
         self.refresh_view_selector()  # make sure the dropdown is populated
 
-        default_view = get_default_view_name()
+        default_view = get_default_view_name(self.current_profile)
         if default_view:
             self.load_selected_view(default_view)
 
@@ -382,6 +373,9 @@ class MainWindow(QMainWindow):
             index = self.view_selector.findText(f"{default_view} (default)")
             if index != -1:
                 self.view_selector.setCurrentIndex(index)
+        else:
+            self.clear_custom_filter()
+            self.clear_custom_sort()
 
     def switch_profile(self):
         """
@@ -390,16 +384,22 @@ class MainWindow(QMainWindow):
         if self.current_profile == self.profile_selector.currentText():
             return
         self.current_profile = self.profile_selector.currentText()
+
+        # Load user's settings
         self.config = load_config(self.current_profile)
+
         if self.theme_selector:
             self.theme_selector.setCurrentText(
                 "Dark" if self.config.get("dark_mode", False) else "Light"
             )
         self.apply_theme()
+
+        self.set_model()
+
         if self.model:
             try:
                 data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_data(data)
+                self.data_manager.save_data(data, self.current_profile)
                 if self.model.undo_stack:
                     self.model.undo_stack.clear()
                 if self.model.redo_stack:
@@ -411,6 +411,7 @@ class MainWindow(QMainWindow):
                 print("Auto-save complete before profile switch.")
             except Exception as e:
                 print("Auto-save before profile switch failed:", e)
+
         # Clear history dropdowns
         self.undo_history_combo.clear()
         self.redo_history_combo.clear()
@@ -534,7 +535,7 @@ class MainWindow(QMainWindow):
                 "custom_sort_key": self.custom_sort_input.currentText(),
             }
 
-            save_view_config(name, config)
+            save_view_config(name, config, self.current_profile)
             self.refresh_view_selector()
             index = self.view_selector.findText(name)
             if index != -1:
@@ -544,7 +545,7 @@ class MainWindow(QMainWindow):
         from view_config import get_view_config
 
         cleaned_name = name.replace(" (default)", "")
-        config = get_view_config(cleaned_name)
+        config = get_view_config(cleaned_name, self.current_profile)
 
         if not config:
             return
@@ -600,8 +601,8 @@ class MainWindow(QMainWindow):
     def refresh_view_selector(self):
         from view_config import get_default_view_name
 
-        all_views = get_all_view_names()
-        default_name = get_default_view_name()
+        all_views = get_all_view_names(self.current_profile)
+        default_name = get_default_view_name(self.current_profile)
 
         self.view_selector.clear()
         for name in all_views:
@@ -662,7 +663,7 @@ class MainWindow(QMainWindow):
     def set_default_view(self):
         name = self.view_selector.currentText().replace(" (default)", "")
         if name:
-            set_default_view(name)
+            set_default_view(name, self.current_profile)
             self.refresh_view_selector()
             # Ensure the current selection stays highlighted
             index = self.view_selector.findText(f"{name} (default)")

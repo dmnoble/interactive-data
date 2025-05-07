@@ -4,7 +4,7 @@
     "custom_sort_key": "",
     "sort_column": 0,
     "ascending": true,
-    "default": false
+    "default": true
   },
   "Structured Filter: Age >= 50": {
     "custom_filter": "age >= 50",
@@ -60,6 +60,6 @@
     "custom_sort_key": "age",
     "sort_column": 0,
     "ascending": true,
-    "default": true
+    "default": false
   }
 }
