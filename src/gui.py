@@ -1,6 +1,6 @@
 # gui.py
 import sys
-from config import load_config, save_config, get_profiles, DEFAULT_CONFIG
+from config import save_config, get_profiles, DEFAULT_CONFIG
 from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
@@ -12,25 +12,20 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QHBoxLayout,
     QShortcut,
-    QTableView,
     QCheckBox,
-    QHeaderView,
     QApplication,
     QMessageBox,
 )
 from PyQt5.QtCore import Qt, QDateTime, QTimer
 from PyQt5.QtGui import QPalette, QColor, QKeySequence
 from logger import setup_logger
-from filter_proxy import TableFilterProxyModel
-from table_model import DataTableModel
 from utils import get_save_time_label_text
-from rich_text_delegate import RichTextDelegate
 from view_config import (
-    save_view_config,
     get_all_view_names,
     get_default_view_name,
     set_default_view,
 )
+from workspace_controller import WorkspaceController
 
 logger = setup_logger("gui")
 
@@ -45,11 +40,9 @@ class MainWindow(QMainWindow):
         data_manager (Data_Manager): controls how data is saved and loaded.
     """
 
-    proxy_model = TableFilterProxyModel()
     config = None
     view_selector = None
     field_selector = None
-    model = None
     current_profile = ""
 
     def __init__(self, data_manager, version):
@@ -64,13 +57,16 @@ class MainWindow(QMainWindow):
             -   Data handling such as displaying, filtering, sorting
         """
         super().__init__()
-        self.table_view = QTableView()
         self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
 
+        self.controller = WorkspaceController()
+
         # Auto-Save Logic
         self.auto_save_timer = QTimer()
-        self.auto_save_timer.timeout.connect(self.check_dirty_and_save)
+        self.auto_save_timer.timeout.connect(
+            self.controller.check_dirty_and_save
+        )
         self.auto_save_timer.start(5 * 60 * 1000)  # Every 5 minutes
 
         # GUI label for time since last save
@@ -82,7 +78,9 @@ class MainWindow(QMainWindow):
 
         # Timer for the hourly backup
         self.backup_timer = QTimer()
-        self.backup_timer.timeout.connect(self.auto_backup_if_needed)
+        self.backup_timer.timeout.connect(
+            self.controller.auto_backup_if_needed
+        )
         self.backup_timer.start(60 * 60 * 1000)  # every hour in ms
 
         # Profile selection dropdown
@@ -97,13 +95,15 @@ class MainWindow(QMainWindow):
             self.create_new_profile()
 
         # Connect profile selection change
-        self.profile_selector.currentIndexChanged.connect(self.switch_profile)
+        self.profile_selector.currentIndexChanged.connect(
+            self.on_profile_changed
+        )
 
         # Theme Selector
         self.theme_label = QLabel("Select Theme:")
         self.theme_selector = QComboBox()
         self.theme_selector.addItems(["Light", "Dark"])
-        self.theme_selector.currentIndexChanged.connect(self.update_theme)
+        self.theme_selector.currentIndexChanged.connect(self.apply_theme)
 
         self.view_selector = QComboBox()
         self.field_selector = QComboBox()
@@ -118,13 +118,13 @@ class MainWindow(QMainWindow):
 
         # Generates self.model but requires elements initiated
         # along with populated theme and profile selectors
-        self.switch_profile()
+        self.on_profile_changed()
         self.layout = QVBoxLayout()
 
         # Data handling
         self.case_checkbox.setChecked(False)
         self.case_checkbox.stateChanged.connect(
-            lambda state: self.proxy_model.set_case_sensitive(
+            lambda state: self.controller.set_case_sensitive(
                 state == Qt.Checked
             )
         )
@@ -150,10 +150,20 @@ class MainWindow(QMainWindow):
         )
         self.operator_selector.addItems(["==", "!=", ">", "<", ">=", "<="])
         self.operator_selector.currentTextChanged.connect(
-            self.update_structured_filter
+            lambda: self.controller.update_structured_filter(
+                field=self.field_selector.currentText(),
+                op=self.operator_selector.currentText(),
+                value=self.value_input.text(),
+            )
         )
         self.value_input.setPlaceholderText("Value")
-        self.value_input.textChanged.connect(self.update_structured_filter)
+        self.value_input.textChanged.connect(
+            lambda: self.controller.update_structured_filter(
+                field=self.field_selector.currentText(),
+                op=self.operator_selector.currentText(),
+                value=self.value_input.text(),
+            )
+        )
 
         self.structured_ok_button = QPushButton("OK")
         self.structured_ok_button.setFixedWidth(40)
@@ -164,7 +174,9 @@ class MainWindow(QMainWindow):
             "Custom Filter Expression (e.g. status == 'active')"
         )
         self.custom_expr_input.textChanged.connect(
-            self.update_custom_filter_expr
+            lambda: self.controller.update_custom_filter_expr(
+                self.custom_expr_input.text()
+            )
         )
 
         self.clear_filter_button = QPushButton("Clear")
@@ -199,9 +211,6 @@ class MainWindow(QMainWindow):
         self.custom_sort_help_button.setFixedWidth(25)
         self.custom_sort_help_button.clicked.connect(self.show_sort_expr_help)
 
-        # Search
-        self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
-
         # Undo/Redo history pulldown
         self.undo_history_combo.setPlaceholderText("Undo History")
         self.redo_history_combo.setPlaceholderText("Redo History")
@@ -210,8 +219,8 @@ class MainWindow(QMainWindow):
         # Add buttons:
         self.undo_button = QPushButton("Undo (Ctrl+Z)")
         self.redo_button = QPushButton("Redo (Ctrl+Y)")
-        self.undo_button.clicked.connect(self.model.undo)
-        self.redo_button.clicked.connect(self.model.redo)
+        self.undo_button.clicked.connect(self.controller.undo)
+        self.redo_button.clicked.connect(self.controller.redo)
 
         # Add to layout:
         button_layout = QHBoxLayout()
@@ -221,19 +230,16 @@ class MainWindow(QMainWindow):
         # Add shortcuts:
         undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
-        undo_shortcut.activated.connect(self.model.undo)
-        redo_shortcut.activated.connect(self.model.redo)
+        undo_shortcut.activated.connect(self.controller.undo)
+        redo_shortcut.activated.connect(self.controller.redo)
 
         # Add to layout (next to undo/redo buttons):
         combo_layout = QHBoxLayout()
         combo_layout.addWidget(self.undo_history_combo)
         combo_layout.addWidget(self.redo_history_combo)
 
-        # Connect to model update:
-        self.model.stack_changed.connect(self.update_undo_redo_history)
-
         # Apply the UI
-        self.layout.addWidget(self.table_view)
+        self.layout.addWidget(self.controller.table_view)
         self.layout.addLayout(button_layout)
         self.layout.addLayout(combo_layout)
         profile_layout = QHBoxLayout()
@@ -287,82 +293,32 @@ class MainWindow(QMainWindow):
         container.setLayout(self.layout)
         self.setCentralWidget(container)
 
-        # Apply theme after loading profile
-        self.apply_theme()
-
-    def check_dirty_and_save(self):
-        if self.model and self.model.is_dirty():
-            try:
-                data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_data(data, self.current_profile)
-                self.last_save_time = QDateTime.currentDateTime()
-                self.model.mark_clean()
-
-                self.unsaved_action_stack.clear()
-                if self.undo_log_path.exists():
-                    self.undo_log_path.unlink()
-
-                print("Auto-save complete.")
-            except Exception as e:
-                print("Auto-save failed:", e)
-
     def update_save_label(self):
         self.save_label.setText(get_save_time_label_text(self.last_save_time))
 
-    def auto_backup_if_needed(self):
-        """
-        Auto-Backup every hour and on close
-        """
-        if self.model and self.model.is_backup_dirty():
-            try:
-                data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_backup(data, self.current_profile)
-                self.model.mark_backup_clean()
-            except Exception as e:
-                print("Auto-backup failed:", e)
+    def on_profile_changed(self):
+        if self.current_profile == self.profile_selector.currentText():
+            return
+        self.current_profile = self.profile_selector.currentText()
+        config = self.controller.load_profile(self.current_profile)
+        headers = self.controller.load_data(self.update_undo_redo_history)
 
-    def set_model(self):
-        """
+        self.controller.apply_to_view()
+        self.update_save_label()
 
-        Returns:
-            dict: The data loaded from  profile data file.
-        """
-        # Load real data from DataManager
-        raw_data = self.data_manager.load_data(self.current_profile)
+        if self.theme_selector:
+            self.theme_selector.setCurrentText(
+                "Dark" if config.get("dark_mode", False) else "Light"
+            )
+        self.apply_theme()
 
-        # Dynamically get headers from first item (or fallback)
-        headers = list(raw_data[0].keys()) if raw_data else []
         self.field_selector.clear()
         self.field_selector.addItems(headers)
         self.update_filter_operators()  # Run after headers added
 
-        # Create the model
-        self.model = DataTableModel(
-            raw_data,
-            headers,
-            data_manager=self.data_manager,
-            proxy_model=self.proxy_model,
-            dark_mode=self.config.get("dark_mode", False),
-        )
-        self.proxy_model.setSourceModel(self.model)
-        self.table_view.setModel(self.proxy_model)
-        self.table_view.setSortingEnabled(True)
-        # Render HTML in cells — including the fancy
-        # substring <span style=...> highlights from search.
-        self.table_view.setItemDelegate(RichTextDelegate())
-        # Start compact: auto-size to content initially
-        self.table_view.horizontalHeader().setStretchLastSection(False)
-        self.table_view.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive
-        )
-        # Give Qt a moment to measure based on the new delegate rendering
-        QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
-        self.table_view.setWordWrap(False)
-        self.table_view.setTextElideMode(Qt.ElideRight)
-
         self.refresh_view_selector()  # make sure the dropdown is populated
 
-        default_view = get_default_view_name(self.current_profile)
+        default_view = self.controller.get_default_view()
         if default_view:
             self.load_selected_view(default_view)
 
@@ -377,66 +333,20 @@ class MainWindow(QMainWindow):
             self.clear_custom_filter()
             self.clear_custom_sort()
 
-    def switch_profile(self):
-        """
-        Handles switching user profiles.
-        """
-        if self.current_profile == self.profile_selector.currentText():
-            return
-        self.current_profile = self.profile_selector.currentText()
-
-        # Load user's settings
-        self.config = load_config(self.current_profile)
-
-        if self.theme_selector:
-            self.theme_selector.setCurrentText(
-                "Dark" if self.config.get("dark_mode", False) else "Light"
-            )
-        self.apply_theme()
-
-        self.set_model()
-
-        if self.model:
-            try:
-                data = self.model.get_current_data_as_dicts()
-                self.data_manager.save_data(data, self.current_profile)
-                if self.model.undo_stack:
-                    self.model.undo_stack.clear()
-                if self.model.redo_stack:
-                    self.model.redo_stack.clear()
-                if self.model.unsaved_action_stack:
-                    self.model.unsaved_action_stack.clear()
-                if self.model.undo_log_path.exists():
-                    self.model.undo_log_path.unlink()
-                print("Auto-save complete before profile switch.")
-            except Exception as e:
-                print("Auto-save before profile switch failed:", e)
-
         # Clear history dropdowns
         self.undo_history_combo.clear()
         self.redo_history_combo.clear()
 
         print(f"Switched to profile: {self.current_profile}")
 
-    def update_theme(self):
-        """
-        Applies the selected theme and saves it to the user profile.
-        """
-        self.config["dark_mode"] = self.theme_selector.currentText() == "Dark"
-        save_config(self.config, self.current_profile)
-        self.apply_theme()
-        if self.model:
-            self.model.set_dark_mode(self.config["dark_mode"])
-        print(
-            f"Theme updated for {self.current_profile}"
-            + f" to {self.theme_selector.currentText()}"
-        )
-
     def apply_theme(self):
         """
         Applies the current user's theme settings.
         """
-        if self.config.get("dark_mode", False):
+        is_dark = self.theme_selector.currentText() == "Dark"
+        self.controller.save_theme_to_config(is_dark)
+
+        if is_dark:
             palette = QPalette()
             palette.setColor(QPalette.Window, QColor(53, 53, 53))
             palette.setColor(QPalette.WindowText, Qt.white)
@@ -479,17 +389,17 @@ class MainWindow(QMainWindow):
         self.profile_selector.clear()
         self.profile_selector.addItems(get_profiles())
 
-    def update_undo_redo_history(self):
+    def update_undo_redo_history(self, undo_stack, redo_stack):
         self.undo_history_combo.clear()
         self.redo_history_combo.clear()
-        for action in reversed(self.model.undo_stack):
+        for action in reversed(undo_stack):
             self.undo_history_combo.addItem(action.description())
-        for action in reversed(self.model.redo_stack):
+        for action in reversed(redo_stack):
             self.redo_history_combo.addItem(action.description())
 
     def closeEvent(self, event):
-        self.auto_backup_if_needed()
-        self.check_dirty_and_save()
+        self.controller.auto_backup_if_needed()
+        self.controller.check_dirty_and_save()
         event.accept()
 
     def save_current_view(self):
@@ -497,7 +407,7 @@ class MainWindow(QMainWindow):
         dialog.setWindowTitle("Save View")
         dialog.setLabelText("Enter view name:")
 
-        if self.config.get("dark_mode", False):
+        if self.theme_selector.currentText() == "Dark":
             dark_palette = QPalette()
             dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
             dark_palette.setColor(QPalette.WindowText, Qt.white)
@@ -515,92 +425,60 @@ class MainWindow(QMainWindow):
         name = dialog.textValue()
 
         if ok and name:
-            config = {
-                "name": name,
-                "search_text": self.custom_expr_input.text(),
-                "case_sensitive": self.case_checkbox.isChecked(),
-                "sort_column": (
-                    self.table_view.horizontalHeader().sortIndicatorSection()
-                ),
-                "ascending": (
-                    self.table_view.horizontalHeader().sortIndicatorOrder()
-                    == Qt.AscendingOrder
-                ),
-                "filter": {
-                    "field": self.field_selector.currentText(),
-                    "operator": self.operator_selector.currentText(),
-                    "value": self.value_input.text(),
-                },
-                "custom_filter": self.custom_expr_input.text(),
-                "custom_sort_key": self.custom_sort_input.currentText(),
-            }
-
-            save_view_config(name, config, self.current_profile)
+            self.controller.save_view_config(
+                name=name,
+                custom_expr=self.custom_expr_input.text(),
+                case_sensitive=self.case_checkbox.isChecked(),
+                field=self.field_selector.currentText(),
+                operator=self.operator_selector.currentText(),
+                value=self.value_input.text(),
+                sort_key=self.custom_sort_input.currentText(),
+            )
             self.refresh_view_selector()
             index = self.view_selector.findText(name)
             if index != -1:
                 self.view_selector.setCurrentIndex(index)
 
     def load_selected_view(self, name):
-        from view_config import get_view_config
-
-        cleaned_name = name.replace(" (default)", "")
-        config = get_view_config(cleaned_name, self.current_profile)
-
+        cleaned_name, config = self.controller.load_view_config(
+            view_name=name,
+        )
         if not config:
             return
 
         self.custom_expr_input.setText(config.get("search_text", ""))
-        self.proxy_model.set_custom_filter_expression(
-            self.custom_expr_input.text()
-        )
         self.case_checkbox.setChecked(config.get("case_sensitive", False))
-
         filter_config = config.get("filter", {})
-        self.field_selector.setCurrentText(filter_config.get("field", ""))
         self.update_filter_operators()
         self.operator_selector.setCurrentText(
             filter_config.get("operator", "==")
         )
+        self.field_selector.setCurrentText(filter_config.get("field", ""))
         self.value_input.setText(filter_config.get("value", ""))
         self.custom_expr_input.setText(config.get("custom_filter", ""))
 
-        sort_expr = config.get("custom_sort_key", "").strip()
-        self.custom_sort_input.setCurrentText(sort_expr)
-
-        # ✅ Apply sort logic here if a key exists
-        if sort_expr:
-            self.apply_custom_sort()
-
-            # ✅ Visually apply saved sort direction (fallback)
-            if "ascending" in config:
-                sort_column = self.model.columnCount() - 1
-                sort_order = (
-                    Qt.AscendingOrder
-                    if config["ascending"]
-                    else Qt.DescendingOrder
-                )
-                self.table_view.sortByColumn(sort_column, sort_order)
-                self.table_view.horizontalHeader().setSortIndicatorShown(True)
-                self.table_view.horizontalHeader().setSortIndicator(
-                    sort_column, sort_order
-                )
-                if config.get("ascending", True):
-                    self.sort_order_selector.setCurrentText("Ascending")
-                else:
-                    self.sort_order_selector.setCurrentText("Descending")
-
-        if not sort_expr:
+        if not config.get("custom_sort_key", "").strip():
             self.clear_custom_sort()
 
+        self.custom_sort_input.setCurrentText(
+            config.get("custom_sort_key", "")
+        )
+
+        if config.get("ascending", True):
+            self.sort_order_selector.setCurrentText("Ascending")
+        else:
+            self.sort_order_selector.setCurrentText("Descending")
+
         # ✅ Mark selection in dropdown
-        index = self.view_selector.findText(name)
-        if index != -1:
-            self.view_selector.setCurrentIndex(index)
+        for i in range(self.view_selector.count()):
+            name = self.view_selector.itemText(i)
+            if cleaned_name in name:
+                self.view_selector.setCurrentIndex(i)
+                break
+
+        self.apply_custom_sort()
 
     def refresh_view_selector(self):
-        from view_config import get_default_view_name
-
         all_views = get_all_view_names(self.current_profile)
         default_name = get_default_view_name(self.current_profile)
 
@@ -609,25 +487,8 @@ class MainWindow(QMainWindow):
             label = f"{name} (default)" if name == default_name else name
             self.view_selector.addItem(label)
 
-    def update_structured_filter(self):
-        field = self.field_selector.currentText()
-        op = self.operator_selector.currentText()
-        value = self.value_input.text()
-        self.proxy_model.set_structured_filter(field, op, value)
-
-    def update_custom_filter_expr(self):
-        expr = self.custom_expr_input.text()
-        self.proxy_model.set_custom_filter_expression(expr)
-
-        # Set search text ONLY if expression is a simple word
-        if expr and (expr.isdigit() or expr.isalpha()):
-            self.proxy_model.set_search_text(expr)
-            self.proxy_model.set_custom_filter_expression("")
-        else:
-            self.proxy_model.set_search_text("")
-            self.proxy_model.set_custom_filter_expression(expr)
-
     def apply_custom_sort(self):
+        asc = self.sort_order_selector.currentText() == "Ascending"
         expr = self.custom_sort_input.currentText().strip()
 
         # Skip placeholder
@@ -639,26 +500,10 @@ class MainWindow(QMainWindow):
         if self.custom_sort_input.findText(expr) == -1:
             self.custom_sort_input.insertItem(0, expr)
 
-        self.proxy_model.set_custom_sort_key(expr)
-        self.proxy_model.rebuild_sort_key_cache()
-
-        # 🛠 Inject sort result values directly into DataTableModel
-        if self.model and self.proxy_model.sort_key_cache:
-            for (
-                proxy_row,
-                sort_value,
-            ) in self.proxy_model.sort_key_cache.items():
-                if 0 <= proxy_row < len(self.model._data):
-                    self.model._data[proxy_row][-1] = str(sort_value)
-
-        sort_order = (
-            Qt.AscendingOrder
-            if self.sort_order_selector.currentText() == "Ascending"
-            else Qt.DescendingOrder
+        self.controller.apply_custom_sort(
+            sort_key=expr,
+            ascending=asc,
         )
-        sort_column = self.model.columnCount() - 1
-
-        self.table_view.sortByColumn(sort_column, sort_order)
 
     def set_default_view(self):
         name = self.view_selector.currentText().replace(" (default)", "")
@@ -671,21 +516,9 @@ class MainWindow(QMainWindow):
                 self.view_selector.setCurrentIndex(index)
 
     def update_filter_operators(self):
-        if not self.model:
-            return
-
         field = self.field_selector.currentText()
 
-        sample_value = None
-        headers = self.model._headers
-        if field in headers:
-            col_index = headers.index(field)
-            for row in range(self.model.rowCount()):
-                index = self.model.index(row, col_index)
-                value = self.model.data(index, self.proxy_model.RAW_VALUE_ROLE)
-                if value is not None:
-                    sample_value = value
-                    break
+        sample_value = self.controller.update_filter_operators(field)
 
         self.operator_selector.clear()
 
@@ -743,7 +576,7 @@ class MainWindow(QMainWindow):
     def apply_structured_filter(self):
         field = self.field_selector.currentText()
         op = self.operator_selector.currentText()
-        value = self.value_input.text()
+        clean_value = self.value_input.text()
 
         if not field or not op:
             return
@@ -751,11 +584,12 @@ class MainWindow(QMainWindow):
         # Auto-quote strings if needed
         if (
             op in ["contains", "startswith", "endswith", "matches", "not"]
-            or not value.isnumeric()
+            or not clean_value.isnumeric()
         ):
-            value = f"'{value}'"
+            value = f"'{clean_value}'"
+        else:
+            value = clean_value
 
-        clean_value = value.strip("'")
         if op == "contains":
             expr = f"{clean_value} in {field}"
         elif op == "not":
@@ -778,13 +612,8 @@ class MainWindow(QMainWindow):
             combined_expr = expr
 
         self.custom_expr_input.setText(combined_expr)
-        self.proxy_model.set_custom_filter_expression(combined_expr)
 
-        # Reset sort to original order if no sort key is active
-        if not self.proxy_model.custom_sort_key:
-            self.table_view.horizontalHeader().setSortIndicator(
-                -1, Qt.AscendingOrder
-            )
+        self.controller.apply_structured_filter(combined_expr)
 
         # ✅ CLEAR structured fields after inserting
         self.field_selector.setCurrentIndex(-1)
@@ -793,23 +622,9 @@ class MainWindow(QMainWindow):
 
     def clear_custom_filter(self):
         self.custom_expr_input.clear()
-        self.proxy_model.set_custom_filter_expression("")
-        self.proxy_model.set_search_text("")  # reset search text too
+        self.controller.clear_custom_filter()
 
     def clear_custom_sort(self):
         self.custom_sort_input.setCurrentText("")
-        self.proxy_model.set_custom_sort_key("")  # ✅ clears the proxy logic
-        self.proxy_model.sort_key_cache.clear()  # ✅ ensure cache is reset
-
-        # ✅ Clear values from the Sort Result column
-        if self.model:
-            sort_column = self.model.columnCount() - 1
-            for row_index in range(len(self.model._data)):
-                self.model._data[row_index][sort_column] = ""
-                index = self.model.index(row_index, sort_column)
-                self.model.dataChanged.emit(index, index)
-
+        self.controller.clear_custom_sort()
         self.sort_order_selector.setCurrentText("Ascending")
-
-        # ✅ Optional: Reset table sort visually
-        self.table_view.sortByColumn(0, Qt.AscendingOrder)

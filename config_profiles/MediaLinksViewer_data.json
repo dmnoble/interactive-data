@@ -3,21 +3,18 @@
     "title": "OpenAI",
     "description": "Artificial intelligence research lab.",
     "image_url": "https://upload.wikimedia.org/wikipedia/commons/0/04/OpenAI_Logo.svg",
-    "link": "https://openai.com",
-    "sort result": ""
+    "link": "https://openai.com"
   },
   {
     "title": "Python",
     "description": "Python programming language homepage.",
     "image_url": "https://www.python.org/static/community_logos/python-logo.png",
-    "link": "https://www.python.org",
-    "sort result": ""
+    "link": "https://www.python.org"
   },
   {
     "title": "Qt",
     "description": "Cross-platform GUI framework.",
     "image_url": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Qt_logo_2016.svg",
-    "link": "https://www.qt.io",
-    "sort result": ""
+    "link": "https://www.qt.io"
   }
 ]

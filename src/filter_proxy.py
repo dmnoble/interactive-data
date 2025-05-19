@@ -50,7 +50,22 @@ class TableFilterProxyModel(QSortFilterProxyModel):
 
     def set_custom_sort_key(self, expr):
         self.custom_sort_key = expr.strip()
-        # self.invalidate()
+        self.sort_key_cache.clear()
+
+        model = self.sourceModel()
+        if model is None:
+            return
+
+        for row_index, row_data in enumerate(model._raw_data):
+            try:
+                scope = {**self.base_symbols, **row_data}
+                result = self.asteval_engine(self.custom_sort_key, scope)
+            except Exception:
+                result = "ERROR"
+            model._raw_data[row_index]["sort_key"] = result
+
+        model.layoutChanged.emit()
+        self.invalidate()
 
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()

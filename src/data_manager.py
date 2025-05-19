@@ -51,6 +51,9 @@ class DataManager:
         Parameter:
             data (dict): The data to save.
         """
+        if not data:
+            return
+
         # Retry logic
         max_attempts = 3
         delay_seconds = 0.5

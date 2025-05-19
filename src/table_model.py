@@ -68,9 +68,9 @@ class DataTableModel(QAbstractTableModel):
             for item in self._raw_data
         ]
 
-        if "sort result" not in self._headers:
+        if "sort key" not in self._headers:
             # 🛠 Inject sort result virtual header
-            self._headers.append("sort result")
+            self._headers.append("sort key")
 
         # 🛠 Inject blank sort result field into each data row
         for row in self._data:
@@ -160,6 +160,17 @@ class DataTableModel(QAbstractTableModel):
 
     def mark_backup_clean(self):
         self._backup_dirty = False
+
+    def finalize_save(self):
+        self.mark_clean()
+        if self.undo_stack:
+            self.undo_stack.clear()
+        if self.redo_stack:
+            self.redo_stack.clear()
+        if self.unsaved_action_stack:
+            self.unsaved_action_stack.clear()
+        if self.undo_log_path.exists():
+            self.undo_log_path.unlink()
 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:

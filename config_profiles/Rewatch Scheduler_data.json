@@ -9,8 +9,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 2,
@@ -25,8 +24,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 3,
@@ -42,8 +40,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 4,
@@ -58,8 +55,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 5,
@@ -73,8 +69,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 6,
@@ -89,8 +84,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 7,
@@ -102,8 +96,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 8,
@@ -119,8 +112,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 9,
@@ -132,8 +124,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 10,
@@ -145,8 +136,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 11,
@@ -160,8 +150,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 12,
@@ -177,8 +166,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 13,
@@ -190,8 +178,7 @@
     "preferences": {
       "theme": "desert",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 14,
@@ -206,8 +193,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 15,
@@ -223,8 +209,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 16,
@@ -240,8 +225,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 17,
@@ -257,8 +241,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 18,
@@ -270,8 +253,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 19,
@@ -287,8 +269,7 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   },
   {
     "id": 20,
@@ -302,7 +283,6 @@
     "preferences": {
       "theme": "hollywood",
       "notifications": true
-    },
-    "sort result": ""
+    }
   }
 ]
