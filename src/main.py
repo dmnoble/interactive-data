@@ -7,20 +7,19 @@ from logger import setup_logger
 from version import __version__
 
 """
-@todo
-    -   Details window for data
-    -   Data interactions: open link, open file, group data, etc.
-    -   Allow simple text search to be combined with structured
-        filter (Filter: Alice or age == 32)
-    -   Configuration for data input page
-@bug
-    -   Putting in an incorrect sort key, sort results to show
-        None, then Apply Custom Sort doesn't work until the Clear
-        button is selected
-    -   When putting in an incorrect or incomplete equation
-        for filtering, the table goes blank and several
-        repeats of this error comes up
-            SyntaxError: invalid syntax (<unknown>, line 1)
+    #TODO:  Details window for data
+    #TODO:  Data interactions: open link, open file, group data, etc.
+    #TODO:  Allow simple text search to be combined with structured
+            filter (Filter: Alice or age == 32)
+    #TODO:  Configuration for data input page
+
+    #FIXME: Putting in an incorrect sort key, sort results to show
+            None, then Apply Custom Sort doesn't work until the Clear
+            button is selected
+    #FIXME: When putting in an incorrect or incomplete equation
+            for filtering, the table goes blank and several
+            repeats of this error comes up
+                SyntaxError: invalid syntax (<unknown>, line 1)
 """
 
 logger = setup_logger("main")

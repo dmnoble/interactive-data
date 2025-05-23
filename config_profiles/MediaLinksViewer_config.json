@@ -1,40 +1,11 @@
 {
-    "dark_mode": true,
-    "columns": [
-        "title",
-        "description",
-        "image_url",
-        "link"
-    ],
-    "default_sort": {
-        "field": "title",
-        "ascending": true
-    },
-    "filters": [],
-    "custom_views": {
-        "Media Overview": {
-            "visible_columns": [
-                "title",
-                "image_url",
-                "link"
-            ],
-            "sort": {
-                "field": "title",
-                "ascending": true
-            }
-        },
-        "Full Details": {
-            "visible_columns": [
-                "title",
-                "description",
-                "image_url",
-                "link"
-            ],
-            "sort": {
-                "field": "description",
-                "ascending": false
-            }
-        }
-    },
-    "default_view": "Media Overview"
+  "columns": [
+    "title",
+    "description",
+    "image_url",
+    "link"
+  ],
+  "filters": [],
+  "default_view": "Media Overview",
+  "theme": "Dark"
 }

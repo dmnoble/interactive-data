@@ -48,8 +48,8 @@ def test_data_manager():
     with open(TEST_DATA_PATH, "w") as f:
         json.dump(sample_data, f)  # Reset to default
 
-    dm = DataManager(TEST_DATA_PATH)  # Load DataManager with sample file
-    yield dm  # Provide instance to tests
+    data_manager = DataManager()  # Load DataManager with sample file
+    yield data_manager  # Provide instance to tests
 
     # Cleanup after test
     if os.path.exists(TEST_DATA_PATH):
@@ -71,7 +71,7 @@ def test_save_and_load_data_roundtrip():
         temp_path = tmp.name
 
     try:
-        manager = DataManager(temp_path)
+        manager = DataManager()
         test_data = [
             {"name": "Alice", "role": "Engineer", "status": "Active"},
             {"name": "Bob", "role": "Designer", "status": "Inactive"},
@@ -99,7 +99,7 @@ def test_save_data_with_unicode_characters():
         temp_path = tmp.name
 
     try:
-        manager = DataManager(temp_path)
+        manager = DataManager()
         test_data = [
             {"name": "Zoë 🌟", "role": "Développeuse", "status": "✔️ Active"},
             {"name": "李雷", "role": "设计师", "status": "🚧 Inactive"},
@@ -120,7 +120,7 @@ def test_save_data_with_unicode_characters():
 
 
 def test_save_data_raises_ioerror():
-    manager = DataManager("fake_path.json")
+    manager = DataManager()
     test_data = [{"name": "Error Case"}]
 
     with patch("builtins.open", mock_open()) as mocked_open:
@@ -135,7 +135,7 @@ def test_save_data_raises_ioerror():
 
 def test_backup_file_is_created_and_old_backups_trimmed():
     with tempfile.TemporaryDirectory() as temp_dir:
-        data_file = os.path.join(temp_dir, "test.json")
+        # data_file = os.path.join(temp_dir, "test.json")
         backup_dir = os.path.join(temp_dir, "backups")
         os.makedirs(backup_dir, exist_ok=True)
 
@@ -169,6 +169,6 @@ def test_backup_file_is_created_and_old_backups_trimmed():
 
                 return os.listdir(backup_dir)
 
-        manager = TestableDataManager(data_file)
+        manager = TestableDataManager()
         files_after = manager.save_backup([{"name": "Test"}])
         assert len(files_after) <= 10

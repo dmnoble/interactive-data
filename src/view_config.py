@@ -45,7 +45,7 @@ def get_default_view_name(profilename="default"):
 
 def set_default_view(name, profilename="default"):
     config_path = get_config_path(profilename)
-    views = load_all_views()
+    views = load_all_views(profilename)
     for vname in views:
         views[vname]["default"] = views[vname]["default"] = vname == name
     with open(config_path, "w", encoding="utf-8") as f:

@@ -1,17 +1,25 @@
 # workspace_controller.py
 
-from config import load_config, save_config
+import os
 from data_manager import DataManager
 from table_model import DataTableModel
-from view_config import get_default_view_name
+from view_config import (
+    set_default_view,
+    get_default_view_name,
+    save_view_config,
+    get_view_config,
+)
+from config_manager import ConfigManager
 from rich_text_delegate import RichTextDelegate
 from PyQt5.QtCore import QTimer, Qt, QDateTime
 from PyQt5.QtWidgets import QHeaderView, QTableView
-from view_config import save_view_config, get_view_config
 from filter_proxy import TableFilterProxyModel
 
 
 class WorkspaceController:
+    CONFIG_DIR = "config_profiles"  # Directory to store user configs
+    CONFIG_END = "_config.json"
+
     def __init__(self):
         self.profile_name = ""
         self.data_manager = DataManager()
@@ -33,9 +41,13 @@ class WorkspaceController:
         if new_profile_name == self.profile_name:
             return  # No-op if same
 
-        self.check_dirty_and_save()
+        if self.profile_name:
+            self.check_dirty_and_save()
         self.profile_name = new_profile_name
-        self.config = load_config(new_profile_name)
+        self.config_path = os.path.join(
+            self.CONFIG_DIR, f"{self.profile_name}{self.CONFIG_END}"
+        )
+        self.config = ConfigManager(self.config_path)
 
         return self.config
 
@@ -56,7 +68,7 @@ class WorkspaceController:
             headers,
             data_manager=self.data_manager,
             proxy_model=self.proxy_model,
-            dark_mode=self.config.get("dark_mode", False),
+            dark_mode=self.config.is_dark_mode(),
         )
         self.proxy_model.setSourceModel(self.model)
 
@@ -96,6 +108,54 @@ class WorkspaceController:
             except Exception as e:
                 print("Auto-backup failed:", e)
 
+    def save_current_view(
+        self,
+        name,
+        custom_expr,
+        case_sensitive,
+        field: str,
+        operator,
+        value,
+        sort_key,
+        ascending,
+    ):
+        """Save current view settings under the given name."""
+        config = {
+            "name": name,
+            "search_text": custom_expr,
+            "case_sensitive": case_sensitive,
+            "sort_column": (
+                self.table_view.horizontalHeader().sortIndicatorSection()
+            ),
+            "ascending": ascending,
+            "filter": {
+                "field": field,
+                "operator": operator,
+                "value": value,
+            },
+            "custom_filter": custom_expr,
+            "custom_sort_key": sort_key,
+        }
+        save_view_config(name, config, self.profile_name)
+
+    def set_default_view(self, view_name):
+        """Mark the given view as default for this profile."""
+        set_default_view(view_name, self.profile_name)
+
+    def apply_structured_filter(self, field, operator, value):
+        """Apply structured field filter via proxy model."""
+        self.proxy_model.set_structured_filter(field, operator, value)
+
+        # Reset sort to original order if no sort key is active
+        if not self.proxy_model.custom_sort_key:
+            self.table_view.horizontalHeader().setSortIndicator(
+                -1, Qt.AscendingOrder
+            )
+
+    def clear_structured_filter(self):
+        """Reset structured filter."""
+        self.proxy_model.set_structured_filter("", "==", "")
+
     def get_default_view(self):
         return get_default_view_name(self.profile_name)
 
@@ -104,7 +164,7 @@ class WorkspaceController:
 
         config = get_view_config(cleaned_name, self.profile_name)
         if not config:
-            return
+            return "", None
 
         filter_text = config.get("search_text", "")
         self.proxy_model.set_custom_filter_expression(filter_text)
@@ -130,10 +190,9 @@ class WorkspaceController:
         return cleaned_name, config
 
     def save_theme_to_config(self, is_dark):
-        self.config["dark_mode"] = is_dark
-        save_config(self.config, self.profile_name)
+        self.config.set_theme("Dark" if is_dark else "Light")
         if self.model:
-            self.model.set_dark_mode(self.config["dark_mode"])
+            self.model.set_dark_mode(is_dark)
 
     def save_view_config(
         self,
@@ -257,21 +316,22 @@ class WorkspaceController:
             self.proxy_model.set_search_text("")
             self.proxy_model.set_custom_filter_expression(expr)
 
-    def update_structured_filter(self, field, op, value):
-        self.proxy_model.set_structured_filter(field, op, value)
+    def update_structured_filter(self, field: str, operator: str, value: str):
+        self.proxy_model.set_structured_filter(field, operator, value)
 
     def clear_custom_filter(self):
         self.proxy_model.set_custom_filter_expression("")
         self.proxy_model.set_search_text("")  # reset search text too
 
-    def apply_structured_filter(self, combined_expr):
-        self.proxy_model.set_custom_filter_expression(combined_expr)
-
-        # Reset sort to original order if no sort key is active
-        if not self.proxy_model.custom_sort_key:
-            self.table_view.horizontalHeader().setSortIndicator(
-                -1, Qt.AscendingOrder
-            )
-
     def set_case_sensitive(self, state):
         self.proxy_model.set_case_sensitive(state)
+
+    def get_profiles(self):
+        """Returns a list of available profiles based on config files."""
+        if not os.path.exists(self.CONFIG_DIR):
+            os.makedirs(self.CONFIG_DIR)
+        return [
+            f.replace(self.CONFIG_END, "")
+            for f in os.listdir(self.CONFIG_DIR)
+            if f.endswith(self.CONFIG_END)
+        ]

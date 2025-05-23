@@ -1,6 +1,5 @@
 # gui.py
 import sys
-from config import save_config, get_profiles, DEFAULT_CONFIG
 from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
@@ -23,7 +22,6 @@ from utils import get_save_time_label_text
 from view_config import (
     get_all_view_names,
     get_default_view_name,
-    set_default_view,
 )
 from workspace_controller import WorkspaceController
 
@@ -40,12 +38,9 @@ class MainWindow(QMainWindow):
         data_manager (Data_Manager): controls how data is saved and loaded.
     """
 
-    config = None
-    view_selector = None
-    field_selector = None
     current_profile = ""
 
-    def __init__(self, data_manager, version):
+    def __init__(self, data_manager, version: str):
         """
         Initiates data manager for user to interact with data.
 
@@ -57,9 +52,9 @@ class MainWindow(QMainWindow):
             -   Data handling such as displaying, filtering, sorting
         """
         super().__init__()
-        self.data_manager = data_manager
         self.setWindowTitle("Data Manager App")
 
+        self.data_manager = data_manager
         self.controller = WorkspaceController()
 
         # Auto-Save Logic
@@ -105,12 +100,12 @@ class MainWindow(QMainWindow):
         self.theme_selector.addItems(["Light", "Dark"])
         self.theme_selector.currentIndexChanged.connect(self.apply_theme)
 
-        self.view_selector = QComboBox()
-        self.field_selector = QComboBox()
+        self.view_selector: QComboBox = QComboBox()
+        self.field_selector: QComboBox = QComboBox()
         self.custom_expr_input = QLineEdit()
         self.case_checkbox = QCheckBox("Case Sensitive")
         self.operator_selector = QComboBox()
-        self.value_input = QLineEdit()
+        self.value_input: QLineEdit = QLineEdit()
         self.custom_sort_input = QComboBox()
         self.sort_order_selector = QComboBox()
         self.undo_history_combo = QComboBox()
@@ -119,19 +114,19 @@ class MainWindow(QMainWindow):
         # Generates self.model but requires elements initiated
         # along with populated theme and profile selectors
         self.on_profile_changed()
-        self.layout = QVBoxLayout()
+        self.main_layout = QVBoxLayout()
 
         # Data handling
         self.case_checkbox.setChecked(False)
         self.case_checkbox.stateChanged.connect(
-            lambda state: self.controller.set_case_sensitive(
-                state == Qt.Checked
+            lambda state: self.controller.set_case_sensitive(  # type: ignore
+                state == Qt.Checked  # type: ignore
             )
         )
 
         # Save View Button
         self.save_view_button = QPushButton("Save Current View")
-        self.save_view_button.clicked.connect(self.save_current_view)
+        self.save_view_button.clicked.connect(self.on_save_current_view)
 
         # View Loader Dropdown
         self.view_selector.setPlaceholderText("Load Saved View")
@@ -141,7 +136,7 @@ class MainWindow(QMainWindow):
 
         # Default view button
         self.set_default_button = QPushButton("Set as Default View")
-        self.set_default_button.clicked.connect(self.set_default_view)
+        self.set_default_button.clicked.connect(self.on_set_default_view)
 
         # Filter
         self.field_selector.setPlaceholderText("Field")
@@ -152,7 +147,7 @@ class MainWindow(QMainWindow):
         self.operator_selector.currentTextChanged.connect(
             lambda: self.controller.update_structured_filter(
                 field=self.field_selector.currentText(),
-                op=self.operator_selector.currentText(),
+                operator=self.operator_selector.currentText(),
                 value=self.value_input.text(),
             )
         )
@@ -160,14 +155,16 @@ class MainWindow(QMainWindow):
         self.value_input.textChanged.connect(
             lambda: self.controller.update_structured_filter(
                 field=self.field_selector.currentText(),
-                op=self.operator_selector.currentText(),
+                operator=self.operator_selector.currentText(),
                 value=self.value_input.text(),
             )
         )
 
         self.structured_ok_button = QPushButton("OK")
         self.structured_ok_button.setFixedWidth(40)
-        self.structured_ok_button.clicked.connect(self.apply_structured_filter)
+        self.structured_ok_button.clicked.connect(
+            self.on_apply_structured_filter
+        )
 
         self.custom_expr_label = QLabel("Filter: ")
         self.custom_expr_input.setPlaceholderText(
@@ -181,7 +178,9 @@ class MainWindow(QMainWindow):
 
         self.clear_filter_button = QPushButton("Clear")
         self.clear_filter_button.setFixedWidth(50)
-        self.clear_filter_button.clicked.connect(self.clear_custom_filter)
+        self.clear_filter_button.clicked.connect(
+            self.on_clear_structured_filter
+        )
 
         self.custom_expr_help_button = QPushButton("?")
         self.custom_expr_help_button.setFixedWidth(25)
@@ -205,7 +204,7 @@ class MainWindow(QMainWindow):
         self.apply_sort_button = QPushButton("Apply Custom Sort")
         self.apply_sort_button.clicked.connect(self.apply_custom_sort)
 
-        self.sort_order_selector.addItems(["Ascending", "Descending"])
+        self.sort_order_selector.addItems(["Asc", "Desc"])
 
         self.custom_sort_help_button = QPushButton("?")
         self.custom_sort_help_button.setFixedWidth(25)
@@ -239,36 +238,36 @@ class MainWindow(QMainWindow):
         combo_layout.addWidget(self.redo_history_combo)
 
         # Apply the UI
-        self.layout.addWidget(self.controller.table_view)
-        self.layout.addLayout(button_layout)
-        self.layout.addLayout(combo_layout)
+        self.main_layout.addWidget(self.controller.table_view)
+        self.main_layout.addLayout(button_layout)
+        self.main_layout.addLayout(combo_layout)
         profile_layout = QHBoxLayout()
         profile_layout.addWidget(self.add_profile_button)
         profile_layout.addWidget(self.profile_label)
         profile_layout.addWidget(self.profile_selector)
-        self.layout.addLayout(profile_layout)
+        self.main_layout.addLayout(profile_layout)
         theme_layout = QHBoxLayout()
         theme_layout.addWidget(self.theme_label)
         theme_layout.addWidget(self.theme_selector)
-        self.layout.addLayout(theme_layout)
+        self.main_layout.addLayout(theme_layout)
         view_layout = QHBoxLayout()
         view_layout.addWidget(self.save_view_button)
         view_layout.addWidget(self.view_selector)
         view_layout.addWidget(self.set_default_button)
-        self.layout.addLayout(view_layout)
+        self.main_layout.addLayout(view_layout)
         search_layout = QHBoxLayout()
         search_layout.addWidget(self.clear_filter_button)
         search_layout.addWidget(self.custom_expr_label)
         search_layout.addWidget(self.custom_expr_input)
         search_layout.addWidget(self.case_checkbox)
         search_layout.addWidget(self.custom_expr_help_button)
-        self.layout.addLayout(search_layout)
+        self.main_layout.addLayout(search_layout)
         structured_layout = QHBoxLayout()
         structured_layout.addWidget(self.field_selector)
         structured_layout.addWidget(self.operator_selector)
         structured_layout.addWidget(self.value_input)
         structured_layout.addWidget(self.structured_ok_button)
-        self.layout.addLayout(structured_layout)
+        self.main_layout.addLayout(structured_layout)
         sort_layout = QHBoxLayout()
         sort_layout.addWidget(self.clear_sort_button)
         sort_layout.addWidget(self.sort_label)
@@ -276,8 +275,8 @@ class MainWindow(QMainWindow):
         sort_layout.addWidget(self.sort_order_selector)
         sort_layout.addWidget(self.apply_sort_button)
         sort_layout.addWidget(self.custom_sort_help_button)
-        self.layout.addLayout(sort_layout)
-        self.layout.addWidget(self.save_label)
+        self.main_layout.addLayout(sort_layout)
+        self.main_layout.addWidget(self.save_label)
 
         # Footer layout for version info
         footer_layout = QHBoxLayout()
@@ -287,10 +286,10 @@ class MainWindow(QMainWindow):
         footer_layout.addStretch()  # Push label to the left or right
 
         # Add to main layout
-        self.layout.addLayout(footer_layout)
+        self.main_layout.addLayout(footer_layout)
 
         container = QWidget()
-        container.setLayout(self.layout)
+        container.setLayout(self.main_layout)
         self.setCentralWidget(container)
 
     def update_save_label(self):
@@ -308,7 +307,7 @@ class MainWindow(QMainWindow):
 
         if self.theme_selector:
             self.theme_selector.setCurrentText(
-                "Dark" if config.get("dark_mode", False) else "Light"
+                "Dark" if config.is_dark_mode() else "Light"
             )
         self.apply_theme()
 
@@ -330,7 +329,7 @@ class MainWindow(QMainWindow):
             if index != -1:
                 self.view_selector.setCurrentIndex(index)
         else:
-            self.clear_custom_filter()
+            self.on_clear_structured_filter()
             self.clear_custom_sort()
 
         # Clear history dropdowns
@@ -373,8 +372,8 @@ class MainWindow(QMainWindow):
             self, "New Profile", "Enter profile name:"
         )
         if ok and new_profile and not new_profile.strip() == "":
-            save_config(
-                DEFAULT_CONFIG, new_profile
+            self.controller.load_profile(
+                new_profile
             )  # Create default config for the new profile
             self.update_profile_list()
             logger.info(f"New profile created for {new_profile}")
@@ -387,7 +386,7 @@ class MainWindow(QMainWindow):
         Refresh the profile list from existing config files.
         """
         self.profile_selector.clear()
-        self.profile_selector.addItems(get_profiles())
+        self.profile_selector.addItems(self.controller.get_profiles())
 
     def update_undo_redo_history(self, undo_stack, redo_stack):
         self.undo_history_combo.clear()
@@ -402,12 +401,13 @@ class MainWindow(QMainWindow):
         self.controller.check_dirty_and_save()
         event.accept()
 
-    def save_current_view(self):
+    def on_save_current_view(self):
         dialog = QInputDialog(self)
         dialog.setWindowTitle("Save View")
         dialog.setLabelText("Enter view name:")
 
-        if self.theme_selector.currentText() == "Dark":
+        is_dark = self.theme_selector.currentText() == "Dark"
+        if is_dark:
             dark_palette = QPalette()
             dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
             dark_palette.setColor(QPalette.WindowText, Qt.white)
@@ -417,29 +417,29 @@ class MainWindow(QMainWindow):
             dark_palette.setColor(QPalette.ButtonText, Qt.white)
             dialog.setPalette(dark_palette)
         else:
-            dialog.setPalette(
-                QApplication.palette()
-            )  # system default for light
+            dialog.setPalette(QApplication.palette())
 
-        ok = dialog.exec_()
-        name = dialog.textValue()
+        if dialog.exec_():
+            name = dialog.textValue()
+            if name:
+                self.controller.save_current_view(
+                    name=name,
+                    custom_expr=self.custom_expr_input.text(),
+                    case_sensitive=self.case_checkbox.isChecked(),
+                    field=self.field_selector.currentText(),
+                    operator=self.operator_selector.currentText(),
+                    value=self.value_input.text(),
+                    sort_key=self.custom_sort_input.currentText(),
+                    ascending=(
+                        self.sort_order_selector.currentText() == "Asc"
+                    ),
+                )
+                self.refresh_view_selector()
+                index = self.view_selector.findText(name)
+                if index != -1:
+                    self.view_selector.setCurrentIndex(index)
 
-        if ok and name:
-            self.controller.save_view_config(
-                name=name,
-                custom_expr=self.custom_expr_input.text(),
-                case_sensitive=self.case_checkbox.isChecked(),
-                field=self.field_selector.currentText(),
-                operator=self.operator_selector.currentText(),
-                value=self.value_input.text(),
-                sort_key=self.custom_sort_input.currentText(),
-            )
-            self.refresh_view_selector()
-            index = self.view_selector.findText(name)
-            if index != -1:
-                self.view_selector.setCurrentIndex(index)
-
-    def load_selected_view(self, name):
+    def load_selected_view(self, name: str):
         cleaned_name, config = self.controller.load_view_config(
             view_name=name,
         )
@@ -465,9 +465,11 @@ class MainWindow(QMainWindow):
         )
 
         if config.get("ascending", True):
-            self.sort_order_selector.setCurrentText("Ascending")
+            self.sort_order_selector.setCurrentText("Asc")
         else:
-            self.sort_order_selector.setCurrentText("Descending")
+            self.sort_order_selector.setCurrentText("Desc")
+
+        self.apply_custom_sort()
 
         # ✅ Mark selection in dropdown
         for i in range(self.view_selector.count()):
@@ -475,8 +477,6 @@ class MainWindow(QMainWindow):
             if cleaned_name in name:
                 self.view_selector.setCurrentIndex(i)
                 break
-
-        self.apply_custom_sort()
 
     def refresh_view_selector(self):
         all_views = get_all_view_names(self.current_profile)
@@ -488,7 +488,7 @@ class MainWindow(QMainWindow):
             self.view_selector.addItem(label)
 
     def apply_custom_sort(self):
-        asc = self.sort_order_selector.currentText() == "Ascending"
+        asc = self.sort_order_selector.currentText() == "Asc"
         expr = self.custom_sort_input.currentText().strip()
 
         # Skip placeholder
@@ -505,15 +505,14 @@ class MainWindow(QMainWindow):
             ascending=asc,
         )
 
-    def set_default_view(self):
-        name = self.view_selector.currentText().replace(" (default)", "")
-        if name:
-            set_default_view(name, self.current_profile)
-            self.refresh_view_selector()
-            # Ensure the current selection stays highlighted
-            index = self.view_selector.findText(f"{name} (default)")
-            if index != -1:
-                self.view_selector.setCurrentIndex(index)
+    def on_set_default_view(self):
+        view_name = self.view_selector.currentText().replace(" (default)", "")
+        self.controller.set_default_view(view_name)
+        self.refresh_view_selector()
+        # Ensure the current selection stays highlighted
+        index = self.view_selector.findText(f"{view_name} (default)")
+        if index != -1:
+            self.view_selector.setCurrentIndex(index)
 
     def update_filter_operators(self):
         field = self.field_selector.currentText()
@@ -573,35 +572,42 @@ class MainWindow(QMainWindow):
         msg.setIcon(QMessageBox.NoIcon)  # <- No chime!
         msg.exec_()
 
-    def apply_structured_filter(self):
+    def on_apply_structured_filter(self):
         field = self.field_selector.currentText()
-        op = self.operator_selector.currentText()
+        operator = self.operator_selector.currentText()
         clean_value = self.value_input.text()
 
-        if not field or not op:
+        if not field or not operator:
             return
+
+        self.controller.apply_structured_filter(
+            field,
+            operator=operator,
+            value=clean_value,
+        )
 
         # Auto-quote strings if needed
         if (
-            op in ["contains", "startswith", "endswith", "matches", "not"]
+            operator
+            in ["contains", "startswith", "endswith", "matches", "not"]
             or not clean_value.isnumeric()
         ):
             value = f"'{clean_value}'"
         else:
             value = clean_value
 
-        if op == "contains":
+        if operator == "contains":
             expr = f"{clean_value} in {field}"
-        elif op == "not":
+        elif operator == "not":
             expr = f"{clean_value} not in {field}"
-        elif op == "matches":
+        elif operator == "matches":
             expr = f"{clean_value} in {field}"  # simple version
-        elif op == "startswith":
+        elif operator == "startswith":
             expr = f"{field}.startswith({value})"
-        elif op == "endswith":
+        elif operator == "endswith":
             expr = f"{field}.endswith({value})"
         else:
-            expr = f"{field} {op} {value}"
+            expr = f"{field} {operator} {value}"
 
         # ➡️ Append to existing custom expression if present
         current_expr = self.custom_expr_input.text().strip()
@@ -613,18 +619,18 @@ class MainWindow(QMainWindow):
 
         self.custom_expr_input.setText(combined_expr)
 
-        self.controller.apply_structured_filter(combined_expr)
+        # self.controller.apply_structured_filter(combined_expr)
 
         # ✅ CLEAR structured fields after inserting
         self.field_selector.setCurrentIndex(-1)
         self.operator_selector.clear()
         self.value_input.clear()
 
-    def clear_custom_filter(self):
+    def on_clear_structured_filter(self):
         self.custom_expr_input.clear()
-        self.controller.clear_custom_filter()
+        self.controller.clear_structured_filter()
 
     def clear_custom_sort(self):
         self.custom_sort_input.setCurrentText("")
         self.controller.clear_custom_sort()
-        self.sort_order_selector.setCurrentText("Ascending")
+        self.sort_order_selector.setCurrentText("Asc")

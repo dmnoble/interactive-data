@@ -134,7 +134,7 @@ class DataTableModel(QAbstractTableModel):
 
         return None
 
-    def set_dark_mode(self, enabled):
+    def set_dark_mode(self, enabled: bool):
         self._dark_mode = enabled
         self.layoutChanged.emit()
 

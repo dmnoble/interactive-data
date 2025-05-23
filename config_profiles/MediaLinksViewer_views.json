@@ -1,0 +1,31 @@
+{
+  "title-desc": {
+    "name": "title-desc",
+    "filter_text": "",
+    "case_sensitive": false,
+    "sort_column": 4,
+    "ascending": false,
+    "filter": {
+      "field": "title",
+      "operator": "contains",
+      "value": ""
+    },
+    "custom_filter": "",
+    "custom_sort_key": "title",
+    "default": true
+  },
+  "len-description": {
+    "name": "len-description",
+    "filter_text": "",
+    "case_sensitive": false,
+    "sort_column": 4,
+    "ascending": true,
+    "filter": {
+      "field": "title",
+      "operator": "contains",
+      "value": ""
+    },
+    "custom_filter": "",
+    "custom_sort_key": "len(description)"
+  }
+}
