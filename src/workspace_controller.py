@@ -29,7 +29,7 @@ class WorkspaceController:
         return cast(DataTableModel, self.model)
 
     @property
-    def required_config(self) -> ConfigManager:
+    def require_config(self) -> ConfigManager:
         assert self.config is not None, "Config must be loaded before use"
         return cast(ConfigManager, self.config)
 
@@ -69,7 +69,7 @@ class WorkspaceController:
             headers,
             data_manager=self.data_manager,
             proxy_model=proxy_model,
-            dark_mode=self.required_config.is_dark_mode(),
+            dark_mode=self.require_config.is_dark_mode(),
         )
         return self.model, headers
 
@@ -145,7 +145,7 @@ class WorkspaceController:
         return config, sort_column
 
     def save_theme_to_config(self, is_dark):
-        self.required_config.set_theme("Dark" if is_dark else "Light")
+        self.require_config.set_theme("Dark" if is_dark else "Light")
         self.require_model.set_dark_mode(is_dark)
 
     def apply_custom_sort(self, sort_key_cache) -> list:
