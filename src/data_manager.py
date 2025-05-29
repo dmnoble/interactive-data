@@ -1,70 +1,70 @@
 # data_manager.py
-import os
+from pathlib import Path
 import json
 import time
 from logger import setup_logger
+from typing import List
 
 logger = setup_logger("data_manager")
 MAX_BACKUPS = 10  # set your cap here
 
 
-CONFIG_DIR = "config_profiles"
+CONFIG_DIR = Path("config_profiles")
 CONFIG_END = "_data.json"
+BACKUP_DIR = Path("backups")
+MAX_BACKUPS = 10
 
 
 class DataManager:
     """
     Manages loading, saving, and backing up user data.
-
-    Attributes:
-        file_path (str): The path to the data file.
     """
 
-    def get_config_path(self, profilename):
+    def get_config_path(self, profilename: str) -> Path:
         """Returns the config file path for a specific profile."""
-        return os.path.join(CONFIG_DIR, f"{profilename}{CONFIG_END}")
+        return CONFIG_DIR / f"{profilename}{CONFIG_END}"
 
-    def load_data(self, profilename="default"):
+    def load_data(self, profilename: str = "default") -> List[dict]:
         """
         Load data from the specified file.
-
-        Returns:
-            dict: The data loaded from the file.
         """
-        config_path = self.get_config_path(profilename)
-        try:
-            with open(config_path, "r") as f:
-                data = json.load(f)
-                if isinstance(data, list) and isinstance(data[0], dict):
-                    return data
-                else:
-                    # Fallback or error handling
-                    print("Unexpected data format")
-                    return []
-        except FileNotFoundError:
+        path = self.get_config_path(profilename)
+        if not path.exists():
             return []
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+                if (
+                    isinstance(data, list)
+                    and data
+                    and isinstance(data[0], dict)
+                ):
+                    return data
+                logger.warning(
+                    "Unexpected data format; expected a list of dicts."
+                )
 
-    def save_data(self, data, profilename="default"):
-        """
-        Save data to the specified file.
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to decode JSON from {path}: {e}")
+        return []
 
-        Parameter:
-            data (dict): The data to save.
-        """
+    def save_data(
+        self, data: List[dict], profilename: str = "default"
+    ) -> None:
+        """Save data to the specified file, with retry logic."""
         if not data:
             return
 
+        path = self.get_config_path(profilename)
         # Retry logic
         max_attempts = 3
         delay_seconds = 0.5
 
-        config_path = self.get_config_path(profilename)
-
         for attempt in range(1, max_attempts + 1):
             try:
-                with open(config_path, "w", encoding="utf-8") as f:
+                with path.open("w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                logger.info(f"Data saved successfully on attempt {attempt}.")
+                logger.info(f"Data saved to {path} on attempt {attempt}")
                 return  # success!
             except IOError as e:
                 logger.warning(f"Save attempt {attempt} failed: {e}")
@@ -73,36 +73,32 @@ class DataManager:
         logger.error("All save attempts failed.")
         raise IOError("Failed to save data after multiple attempts.")
 
-    def save_backup(self, data, profilename="default"):
-        backup_dir = "backups"
-        os.makedirs(backup_dir, exist_ok=True)
+    def save_backup(
+        self, data: List[dict], profilename: str = "default"
+    ) -> None:
+        """Save a timestamped backup of the data and prune old backups."""
+        BACKUP_DIR.mkdir(exist_ok=True)
 
-        config_path = self.get_config_path(profilename)
-
+        src_filename = self.get_config_path(profilename).name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = os.path.basename(config_path)
-        backup_path = os.path.join(backup_dir, f"{filename}.{timestamp}.bak")
+        backup_file = BACKUP_DIR / f"{src_filename}.{timestamp}.bak"
 
         try:
-            with open(backup_path, "w", encoding="utf-8") as f:
+            with backup_file.open("w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.info(f"Backup saved to {backup_path}")
+            logger.info(f"Backup saved to {backup_file}")
         except Exception as e:
-            logger.warning(f"Failed to save backup: {e}")
+            logger.warning(f"Failed to save backup to {backup_file}: {e}")
 
-        # 🔁 Delete old backups if over cap
-        backups = sorted(
-            [
-                os.path.join(backup_dir, f)
-                for f in os.listdir(backup_dir)
-                if f.startswith(filename) and f.endswith(".bak")
-            ]
-        )
+        # Prune old backups
+        backups = sorted([f for f in BACKUP_DIR.glob(f"{src_filename}.*.bak")])
 
         while len(backups) > MAX_BACKUPS:
-            to_delete = backups.pop(0)
+            old_backup = backups.pop(0)
             try:
-                os.remove(to_delete)
-                logger.info(f"Old backup removed: {to_delete}")
+                old_backup.unlink()
+                logger.info(f"Old backup removed: {old_backup}")
             except Exception as e:
-                logger.warning(f"Failed to remove old backup: {e}")
+                logger.warning(
+                    f"Failed to remove old backup {old_backup}: {e}"
+                )

@@ -1,11 +1,19 @@
-from PyQt5.QtWidgets import QStyledItemDelegate
-from PyQt5.QtGui import QTextDocument
-from PyQt5.QtCore import QSize, Qt, QRectF
+from PyQt5.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
+from PyQt5.QtGui import QTextDocument, QPainter
+from PyQt5.QtCore import QSize, Qt, QRectF, QModelIndex
 
 
 class RichTextDelegate(QStyledItemDelegate):
-    def paint(self, painter, option, index):
-        text = index.data(Qt.DisplayRole)
+    """A delegate to render HTML content inside table cells."""
+
+    def paint(
+        self,
+        painter: QPainter,
+        option: QStyleOptionViewItem,
+        index: QModelIndex,
+    ) -> None:
+        """Paint HTML content for a given index."""
+        text = index.data(Qt.DisplayRole) or ""
         doc = QTextDocument()
         doc.setHtml(text)
         doc.setTextWidth(option.rect.width())  # constrain width
@@ -19,8 +27,11 @@ class RichTextDelegate(QStyledItemDelegate):
         )
         painter.restore()
 
-    def sizeHint(self, option, index):
-        text = index.data(Qt.DisplayRole)
+    def sizeHint(
+        self, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> QSize:
+        """Return size of rendered HTML content."""
+        text = index.data(Qt.DisplayRole) or ""
         doc = QTextDocument()
         doc.setHtml(text)
         doc.setTextWidth(option.rect.width())  # ensures wrapping calculation
