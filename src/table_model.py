@@ -1,9 +1,18 @@
 import json
 from pathlib import Path
-from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
+from typing import Optional
 from undo_redo import Action
 from PyQt5.QtWidgets import QMessageBox
 import os
+
+# import copy
+import logging
+
+
+from typing import Any
+from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, pyqtSignal
+
+logger = logging.getLogger(__name__)
 
 
 class DataTableModel(QAbstractTableModel):
@@ -24,29 +33,38 @@ class DataTableModel(QAbstractTableModel):
     transparency.
     """
 
-    stack_changed = pyqtSignal()
-    undo_stack: list[Action] = []
-    redo_stack: list[Action] = []
-    unsaved_action_stack: list[Action] = []
-    undo_log_path = Path(".undo_log.json")
     RAW_VALUE_ROLE = Qt.UserRole + 1
+    stack_changed = pyqtSignal()
 
     def __init__(
         self,
-        data,
-        headers=None,
-        data_manager=None,
-        proxy_model=None,
-        dark_mode=False,
+        data: list[dict],
+        headers: Optional[list[str]] = None,
+        data_manager: Optional[Any] = None,
+        proxy_model: Optional[Any] = None,
+        dark_mode: bool = False,
     ):
         super().__init__()
-        self.stack_changed.connect(self.write_recovery_log_to_file)
+
         self._raw_data = data or []
         self._data_manager = data_manager
         self._proxy_model = proxy_model
         self._dark_mode = dark_mode
-        self._dirty = False
-        self._backup_dirty = False
+
+        self.undo_stack: list[Action] = []
+        self.redo_stack: list[Action] = []
+        self.unsaved_action_stack: list[Action] = []
+        self._dirty: bool = False
+        self._backup_dirty: bool = False
+
+        self.undo_log_path: Path = Path(".undo_log.json")
+        self.stack_changed.connect(self.write_recovery_log_to_file)
+        if headers:
+            self._headers = headers.copy()  # real headers from the loaded data
+        else:
+            self._headers = (
+                list(self._raw_data[0].keys()) if self._raw_data else []
+            )
 
         if self.undo_log_path.exists():
             test_mode = os.environ.get("IDW_TEST_MODE") == "1"
@@ -55,13 +73,6 @@ class DataTableModel(QAbstractTableModel):
                 self.replay_undo_stack()
             else:
                 self.undo_log_path.unlink()
-
-        if headers:
-            self._headers = headers.copy()  # real headers from the loaded data
-        else:
-            self._headers = (
-                list(self._raw_data[0].keys()) if self._raw_data else []
-            )
 
         self._data = [
             [item.get(header, "") for header in self._headers]
@@ -76,24 +87,24 @@ class DataTableModel(QAbstractTableModel):
         for row in self._data:
             row.append("")
 
-    def rowCount(self, parent=None):
+    def rowCount(self, parent=QModelIndex()) -> int:
         return len(self._data)
 
-    def columnCount(self, parent=None):
+    def columnCount(self, parent=QModelIndex()) -> int:
         if not hasattr(self, "_headers") or self._headers is None:
             return 0
         return len(self._headers)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
         if not index.isValid():
             return None
 
         row = index.row()
-        col = index.column()
+        column = index.column()
 
         # If this is a regular column
 
-        value = self._data[row][col]
+        value = self._data[row][column]
 
         if role == Qt.DisplayRole:
             display = str(value)
@@ -129,54 +140,55 @@ class DataTableModel(QAbstractTableModel):
             text_color = "white" if self._dark_mode else "black"
             return f'<span style="color: {text_color}">{display}</span>'
 
-        if role == self.RAW_VALUE_ROLE:
+        elif role == self.RAW_VALUE_ROLE:
             return value  # Actual raw value used for comparisons
-
         return None
 
     def set_dark_mode(self, enabled: bool):
         self._dark_mode = enabled
         self.layoutChanged.emit()
 
-    def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                return self._headers[section]
-            else:
-                return str(section)
+    def headerData(self, section, orientation, role=Qt.DisplayRole) -> Any:
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
         return None
 
-    def flags(self, index):
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
-    def is_dirty(self):
+    def is_dirty(self) -> bool:
         return self._dirty
 
-    def is_backup_dirty(self):
+    def is_backup_dirty(self) -> bool:
         return self._backup_dirty
 
-    def mark_clean(self):
+    def mark_clean(self) -> None:
         self._dirty = False
 
-    def mark_backup_clean(self):
+    def mark_backup_clean(self) -> None:
         self._backup_dirty = False
 
-    def finalize_save(self):
-        self.mark_clean()
-        if self.undo_stack:
-            self.undo_stack.clear()
-        if self.redo_stack:
-            self.redo_stack.clear()
-        if self.unsaved_action_stack:
-            self.unsaved_action_stack.clear()
-        if self.undo_log_path.exists():
-            self.undo_log_path.unlink()
+    def finalize_save(self) -> None:
+        """Mark state as clean and reset undo history to this point."""
+        try:
+            self.mark_clean()
+            if self.undo_stack:
+                self.undo_stack.clear()
+            if self.redo_stack:
+                self.redo_stack.clear()
+            if self.unsaved_action_stack:
+                self.unsaved_action_stack.clear()
+            if self.undo_log_path.exists():
+                self.undo_log_path.unlink()
+        except Exception as e:
+            logger.warning(f"Failed to finalize save: {e}")
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role == Qt.EditRole:
-            row = index.row()
-            col = index.column()
-            current_value = self._data[row][col]
+    def setData(
+        self, index: QModelIndex, value: Any, role=Qt.EditRole
+    ) -> bool:
+        if index.isValid() and role == Qt.EditRole:
+            row, column = index.row(), index.column()
+            current_value = self._data[row][column]
 
             if current_value == value:
                 return False  # No change → no dirty flag
@@ -189,7 +201,7 @@ class DataTableModel(QAbstractTableModel):
             self.unsaved_action_stack.append(action)
             self.stack_changed.emit()
 
-            self._data[row][col] = value
+            self._data[row][column] = value
             self._dirty = True
             self._backup_dirty = True
             self.dataChanged.emit(index, index)
@@ -197,33 +209,50 @@ class DataTableModel(QAbstractTableModel):
             return True
         return False
 
-    def update_data(self, new_data):
+    def update_data(self, new_data) -> None:
         self.beginResetModel()
-        self.__init__(new_data, headers=self._headers)
+        self._raw_data = new_data or []
+        self._data = [
+            [item.get(header, "") for header in self._headers]
+            for item in self._raw_data
+        ]
+        self.layoutChanged.emit()
         self.endResetModel()
 
-    def get_current_data_as_dicts(self):
+    def get_current_data_as_dicts(self) -> list[dict]:
         return [
             {self._headers[i]: row[i] for i in range(len(self._headers))}
             for row in self._data
         ]
 
-    def undo(self):
-        if self.undo_stack:
-            action = self.undo_stack.pop()
-            if self.unsaved_action_stack:
-                self.unsaved_action_stack.pop()
-            self._apply_action(action, undo=True)
-            self.redo_stack.append(action)
-            self.stack_changed.emit()
+    def undo(self) -> None:
+        """Undo one step of recorded history."""
 
-    def redo(self):
-        if self.redo_stack:
+        try:
+            if self.undo_stack:
+                last = self.undo_stack.pop()
+                if self.unsaved_action_stack:
+                    self.unsaved_action_stack.pop()
+                self._apply_action(last, undo=True)
+                self.redo_stack.append(last)
+                self.stack_changed.emit()
+
+        except Exception as e:
+            logger.warning(f"Undo failed: {e}")
+
+    def redo(self) -> None:
+        """Redo one step from the redo stack."""
+        if not self.redo_stack:
+            return
+        try:
             action = self.redo_stack.pop()
             self._apply_action(action, undo=False)
             self.undo_stack.append(action)
             self.unsaved_action_stack.append(action)
             self.stack_changed.emit()
+
+        except Exception as e:
+            logger.warning(f"Redo failed: {e}")
 
     def _apply_action(self, action, undo=True):
         value = action.old_value if undo else action.new_value
@@ -258,7 +287,8 @@ class DataTableModel(QAbstractTableModel):
                 for entry in data.get("unsaved_action_stack", [])
             ]
 
-    def replay_undo_stack(self):
+    def replay_undo_stack(self) -> None:
+        """Replay stack to restore undo state from disk or memory."""
         try:
             for action in self.unsaved_action_stack:
                 self._apply_action(action, undo=False)
@@ -276,3 +306,10 @@ class DataTableModel(QAbstractTableModel):
         )
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         return msg.exec_() == QMessageBox.Yes
+
+    def update_sort_column_from_cache(self):
+        """Update the sort column based on the cached sort key."""
+        if self._proxy_model and self._proxy_model.sort_key_cache:
+            for row_idx, value in self._proxy_model.sort_key_cache.items():
+                if 0 <= row_idx < len(self._data):
+                    self._data[row_idx][-1] = str(value)

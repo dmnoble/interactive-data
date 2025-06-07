@@ -1,102 +1,89 @@
 # workspace_controller.py
 
+from pathlib import Path
+import logging
+from typing import Optional, cast
 import os
 from data_manager import DataManager
 from table_model import DataTableModel
-from view_config import (
-    set_default_view,
-    get_default_view_name,
-    save_view_config,
-    get_view_config,
-)
 from config_manager import ConfigManager
-from rich_text_delegate import RichTextDelegate
-from PyQt5.QtCore import QTimer, Qt, QDateTime
-from PyQt5.QtWidgets import QHeaderView, QTableView
-from filter_proxy import TableFilterProxyModel
+from view_config_service import ViewConfigService
+
+logger = logging.getLogger(__name__)
 
 
 class WorkspaceController:
-    CONFIG_DIR = "config_profiles"  # Directory to store user configs
+    # Directory to store user configs
+    CONFIG_DIR = Path("config_profiles")
     CONFIG_END = "_config.json"
 
-    def __init__(self):
-        self.profile_name = ""
+    def __init__(self) -> None:
+        self.profile_name: str = ""
         self.data_manager = DataManager()
-        self.table_view = QTableView()
-        self.config = None
-        self.model = None
-        self.proxy_model = TableFilterProxyModel()
+        self.config: Optional[ConfigManager] = None
+        self.model: Optional[DataTableModel] = None
 
-        # Search
-        self.table_view.setTextElideMode(Qt.ElideNone)  # allow wrapping
+    @property
+    def require_model(self) -> DataTableModel:
+        assert self.model is not None, "Model not loaded"
+        return cast(DataTableModel, self.model)
 
-    def undo(self):
-        self.model.undo()
+    @property
+    def require_config(self) -> ConfigManager:
+        assert self.config is not None, "Config must be loaded before use"
+        return cast(ConfigManager, self.config)
 
-    def redo(self):
-        self.model.redo()
+    def undo(self) -> None:
+        """Undo the last action in the model."""
+        self.require_model.undo()
 
-    def load_profile(self, new_profile_name: str):
+    def redo(self) -> None:
+        self.require_model.redo()
+
+    def load_profile(self, new_profile_name: str) -> Optional[ConfigManager]:
         if new_profile_name == self.profile_name:
-            return  # No-op if same
+            return None
 
         if self.profile_name:
             self.check_dirty_and_save()
+
         self.profile_name = new_profile_name
-        self.config_path = os.path.join(
-            self.CONFIG_DIR, f"{self.profile_name}{self.CONFIG_END}"
+        self.config_path = (
+            self.CONFIG_DIR / f"{self.profile_name}{self.CONFIG_END}"
         )
         self.config = ConfigManager(self.config_path)
 
+        logger.info(f"Loaded profile: {self.profile_name}")
         return self.config
 
-    def load_data(self, update_undo_redo_history):
+    def load_data(self, proxy_model) -> tuple[DataTableModel, list]:
         # Load real data from DataManager
         raw_data = self.data_manager.load_data(self.profile_name)
 
         # Dynamically get headers from first item (or fallback)
         headers = list(raw_data[0].keys()) if raw_data else []
 
-        is_first_model = False
-        if not self.model:
-            is_first_model = True
-
         # Create the model
         self.model = DataTableModel(
             raw_data,
             headers,
             data_manager=self.data_manager,
-            proxy_model=self.proxy_model,
-            dark_mode=self.config.is_dark_mode(),
+            proxy_model=proxy_model,
+            dark_mode=self.require_config.is_dark_mode(),
         )
-        self.proxy_model.setSourceModel(self.model)
+        return self.model, headers
 
-        if is_first_model:
-            # Connect to model update:
-            self.model.stack_changed.connect(
-                lambda: update_undo_redo_history(
-                    self.model.undo_stack, self.model.redo_stack
-                )
-            )
-            print("Initalized model")
-            self.table_view.setModel(self.proxy_model)
-            self.table_view.setSortingEnabled(True)  # Only works through proxy
-
-        return headers
-
-    def check_dirty_and_save(self):
+    def check_dirty_and_save(self) -> None:
         if self.model and self.model.is_dirty():
             try:
                 data = self.model.get_current_data_as_dicts()
                 self.data_manager.save_data(data, self.profile_name)
-                self.last_save_time = QDateTime.currentDateTime()
                 self.model.finalize_save()
-                print("Auto-save complete.")
+                logger.info("Auto-save complete.")
             except Exception as e:
-                print("Auto-save failed:", e)
+                logger.exception("Auto-save failed:", exc_info=e)
 
-    def auto_backup_if_needed(self):
+    def auto_backup_if_needed(self) -> None:
         """
         Auto-Backup every hour and on close
         """
@@ -105,116 +92,29 @@ class WorkspaceController:
                 data = self.model.get_current_data_as_dicts()
                 self.data_manager.save_backup(data, self.profile_name)
                 self.model.mark_backup_clean()
+                logger.info("Auto-backup successful.")
             except Exception as e:
-                print("Auto-backup failed:", e)
+                logger.warning("Auto-backup failed:", exc_info=e)
 
     def save_current_view(
         self,
-        name,
-        custom_expr,
-        case_sensitive,
+        name: str,
+        custom_expr: str,
+        case_sensitive: bool,
+        sort_column: int,
         field: str,
-        operator,
-        value,
-        sort_key,
-        ascending,
-    ):
+        operator: str,
+        value: str,
+        sort_key: str,
+        ascending: bool,
+    ) -> None:
         """Save current view settings under the given name."""
-        config = {
-            "name": name,
-            "search_text": custom_expr,
-            "case_sensitive": case_sensitive,
-            "sort_column": (
-                self.table_view.horizontalHeader().sortIndicatorSection()
-            ),
-            "ascending": ascending,
-            "filter": {
-                "field": field,
-                "operator": operator,
-                "value": value,
-            },
-            "custom_filter": custom_expr,
-            "custom_sort_key": sort_key,
-        }
-        save_view_config(name, config, self.profile_name)
 
-    def set_default_view(self, view_name):
-        """Mark the given view as default for this profile."""
-        set_default_view(view_name, self.profile_name)
-
-    def apply_structured_filter(self, field, operator, value):
-        """Apply structured field filter via proxy model."""
-        self.proxy_model.set_structured_filter(field, operator, value)
-
-        # Reset sort to original order if no sort key is active
-        if not self.proxy_model.custom_sort_key:
-            self.table_view.horizontalHeader().setSortIndicator(
-                -1, Qt.AscendingOrder
-            )
-
-    def clear_structured_filter(self):
-        """Reset structured filter."""
-        self.proxy_model.set_structured_filter("", "==", "")
-
-    def get_default_view(self):
-        return get_default_view_name(self.profile_name)
-
-    def load_view_config(self, view_name):
-        cleaned_name = view_name.replace(" (default)", "")
-
-        config = get_view_config(cleaned_name, self.profile_name)
-        if not config:
-            return "", None
-
-        filter_text = config.get("search_text", "")
-        self.proxy_model.set_custom_filter_expression(filter_text)
-        self.proxy_model.set_search_text(
-            filter_text if filter_text.isalnum() else ""
-        )
-        filter_cfg = config.get("filter", {})
-        self.proxy_model.set_structured_filter(
-            filter_cfg.get("field", ""),
-            filter_cfg.get("operator", "=="),
-            filter_cfg.get("value", ""),
-        )
-
-        # self.table_view.sortByColumn(
-        #     config.get("sort_column", 0),
-        #     (
-        #         Qt.AscendingOrder
-        #         if config.get("ascending", True)
-        #         else Qt.DescendingOrder
-        #     ),
-        # )
-
-        return cleaned_name, config
-
-    def save_theme_to_config(self, is_dark):
-        self.config.set_theme("Dark" if is_dark else "Light")
-        if self.model:
-            self.model.set_dark_mode(is_dark)
-
-    def save_view_config(
-        self,
-        name,
-        custom_expr,
-        case_sensitive,
-        field,
-        operator,
-        value,
-        sort_key,
-    ):
-        ascending = (
-            self.table_view.horizontalHeader().sortIndicatorOrder()
-            == Qt.AscendingOrder
-        )
         config = {
             "name": name,
             "filter_text": custom_expr,
             "case_sensitive": case_sensitive,
-            "sort_column": (
-                self.table_view.horizontalHeader().sortIndicatorSection()
-            ),
+            "sort_column": (sort_column),
             "ascending": ascending,
             "filter": {
                 "field": field,
@@ -224,65 +124,42 @@ class WorkspaceController:
             "custom_filter": custom_expr,
             "custom_sort_key": sort_key,
         }
-        save_view_config(name, config, self.profile_name)
+        ViewConfigService.save_view(name, config, self.profile_name)
 
-    def apply_to_view(self):
-        """Hook up delegate, model, etc. to a QTableView."""
-        if not self.model:
-            return
+    def set_default_view(self, view_name: str) -> None:
+        """Mark the given view as default for this profile."""
+        ViewConfigService.set_default(view_name, self.profile_name)
 
-        # Render HTML in cells — including the fancy
-        # substring <span style=...> highlights from search.
-        self.table_view.setItemDelegate(RichTextDelegate())
-        self.table_view.setSortingEnabled(True)
-        self.table_view.setWordWrap(False)
-        self.table_view.setTextElideMode(Qt.ElideRight)
-        # Start compact: auto-size to content initially
-        self.table_view.horizontalHeader().setStretchLastSection(False)
-        self.table_view.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive
-        )
-        # Give Qt a moment to measure based on the new delegate rendering
-        QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
+    def get_default_view(self):
+        return ViewConfigService.get_default(self.profile_name)
 
-        # self.table_view.setWordWrap(False)
-        # self.table_view.setTextElideMode(Qt.ElideRight)
+    def load_view_config(self, view_name: str) -> tuple[Optional[dict], int]:
+        config = ViewConfigService.load_view(view_name, self.profile_name)
 
-    def apply_custom_sort(self, sort_key, ascending):
-        if not sort_key:
-            return
+        if not config:  # If no config found, return None
+            return None, 0
 
-        # This fixes (somehow) the issue of the sorting sometimes
-        # reverting to column 0 (id) even when there is a sort_key
-        self.table_view.sortByColumn(0, Qt.AscendingOrder)
+        self.require_model.update_sort_column_from_cache()
+        sort_column = self.require_model.columnCount() - 1
 
-        self.proxy_model.set_custom_sort_key(sort_key)
-        self.proxy_model.rebuild_sort_key_cache()
+        return config, sort_column
 
+    def save_theme_to_config(self, is_dark):
+        self.require_config.set_theme("Dark" if is_dark else "Light")
+        self.require_model.set_dark_mode(is_dark)
+
+    def apply_custom_sort(self, sort_key_cache) -> list:
         # 🛠 Inject sort result values directly into DataTableModel
-        if self.model and self.proxy_model.sort_key_cache:
-            for (
-                proxy_row,
-                sort_value,
-            ) in self.proxy_model.sort_key_cache.items():
-                if 0 <= proxy_row < len(self.model._data):
-                    self.model._data[proxy_row][-1] = str(sort_value)
+        if self.model:
+            for row_idx, sort_value in sort_key_cache.items():
+                if 0 <= row_idx < len(self.model._data):
+                    self.model._data[row_idx][-1] = str(sort_value)
 
         # ✅ Visually apply saved sort direction (fallback)
-        sort_order = Qt.AscendingOrder if ascending else Qt.DescendingOrder
-        headers = self.model._headers
+        headers = self.require_model._headers
+        return headers
 
-        sort_column = headers.index("sort key") if "sort key" in headers else 0
-        self.table_view.sortByColumn(sort_column, sort_order)
-        self.table_view.horizontalHeader().setSortIndicator(
-            sort_column, sort_order
-        )
-        self.table_view.horizontalHeader().setSortIndicatorShown(True)
-
-    def clear_custom_sort(self):
-        self.proxy_model.set_custom_sort_key("")
-        self.proxy_model.sort_key_cache.clear()
-
+    def clear_custom_sort(self) -> None:
         if self.model:
             sort_column = self.model.columnCount() - 1
             for row_index in range(len(self.model._data)):
@@ -290,41 +167,18 @@ class WorkspaceController:
                 index = self.model.index(row_index, sort_column)
                 self.model.dataChanged.emit(index, index)
 
-        self.table_view.sortByColumn(0, Qt.AscendingOrder)
-
-    def update_filter_operators(self, field):
-        sample_value = None
-        headers = self.model._headers
+    def update_filter_operators(self, field: str, raw_value_role: int) -> str:
+        sample_value = ""
+        headers = self.require_model._headers
         if field in headers:
             col_index = headers.index(field)
-            for row in range(self.model.rowCount()):
-                index = self.model.index(row, col_index)
-                value = self.model.data(index, self.proxy_model.RAW_VALUE_ROLE)
+            for row in range(self.require_model.rowCount()):
+                index = self.require_model.index(row, col_index)
+                value = self.require_model.data(index, raw_value_role)
                 if value is not None:
                     sample_value = value
                     break
         return sample_value
-
-    def update_custom_filter_expr(self, expr):
-        self.proxy_model.set_custom_filter_expression(expr)
-
-        # Set search text ONLY if expression is a simple word
-        if expr and (expr.isdigit() or expr.isalpha()):
-            self.proxy_model.set_search_text(expr)
-            self.proxy_model.set_custom_filter_expression("")
-        else:
-            self.proxy_model.set_search_text("")
-            self.proxy_model.set_custom_filter_expression(expr)
-
-    def update_structured_filter(self, field: str, operator: str, value: str):
-        self.proxy_model.set_structured_filter(field, operator, value)
-
-    def clear_custom_filter(self):
-        self.proxy_model.set_custom_filter_expression("")
-        self.proxy_model.set_search_text("")  # reset search text too
-
-    def set_case_sensitive(self, state):
-        self.proxy_model.set_case_sensitive(state)
 
     def get_profiles(self):
         """Returns a list of available profiles based on config files."""
@@ -335,3 +189,37 @@ class WorkspaceController:
             for f in os.listdir(self.CONFIG_DIR)
             if f.endswith(self.CONFIG_END)
         ]
+
+    def get_all_view_names(self) -> list:
+        """Get all view names for the current profile."""
+        return ViewConfigService.list_views(self.profile_name)
+
+    def get_default_view_name(self) -> Optional[str]:
+        """Get the default view name for the current profile."""
+        return ViewConfigService.get_default(self.profile_name)
+
+    def create_profile(self, profile_name: str) -> bool:
+        """
+        Create a new profile config and associated empty data file.
+        Returns True if profile was created, False if it already existed.
+        """
+        existing = profile_name in self.get_profiles()
+        if existing:
+            return False
+
+        # Create default config and empty data file
+        self.load_profile(profile_name)
+        self.data_manager.save_data([], profile_name)
+        return True
+
+    def get_structured_filter_field(self) -> str:
+        if not self.config:
+            return ""
+        filter_cfg = self.config.config.get("filter", {})
+        return filter_cfg.get("field", "")
+
+    def get_custom_filter(self) -> str:
+        if not self.config:
+            return ""
+        filter_cfg = self.config.config.get("filter", {})
+        return filter_cfg.get("field", "")

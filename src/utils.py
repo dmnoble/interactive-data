@@ -1,12 +1,12 @@
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 from PyQt5.QtCore import QDateTime
 
 
-def format_date(date_string):
+def format_date(date_string: str) -> str:
     """
-    Converts a date string (YYYY-MM-DD) into a readable format (e.g., 'October
-    12, 2023').
+    Converts a date string (YYYY-MM-DD) into a readable format.
+    Example: '2023-10-12' → 'October 12, 2023'
     """
     try:
         return datetime.strptime(date_string, "%Y-%m-%d").strftime("%B %d, %Y")
@@ -14,24 +14,16 @@ def format_date(date_string):
         return "Invalid date format"
 
 
-def multi_sort(data, sort_keys):
+def multi_sort(data: list[dict], sort_keys: list[str]) -> list[dict]:
     """
-    Sorts a list of dictionaries based on multiple keys.
-
-    :param data: List of dictionaries
-    :param sort_keys: List of keys to sort by (in priority order)
-    :return: Sorted list of dictionaries
+    Sorts a list of dictionaries by multiple keys in order of priority.
     """
     return sorted(data, key=lambda x: tuple(x.get(k, "") for k in sort_keys))
 
 
-def validate_input(value, expected_type):
+def validate_input(value: Any, expected_type: type) -> bool:
     """
-    Validates user input based on expected type.
-
-    :param value: The value to check
-    :param expected_type: The type the value should be (str, int, float, etc.)
-    :return: Boolean indicating validity
+    Validates that a value can be cast to the expected type.
     """
     try:
         expected_type(value)
@@ -43,15 +35,12 @@ def validate_input(value, expected_type):
 def remove_duplicates(data_list):
     """
     Removes duplicates from a list while preserving order.
-
-    :param data_list: List with possible duplicate values
-    :return: List with unique values
     """
     seen = set()
     return [x for x in data_list if not (x in seen or seen.add(x))]
 
 
-def get_current_timestamp():
+def get_current_timestamp() -> str:
     """
     Returns the current timestamp in YYYY-MM-DD HH:MM:SS format.
     """
@@ -61,6 +50,9 @@ def get_current_timestamp():
 def get_save_time_label_text(
     last_save_time: QDateTime, current_time: Optional[QDateTime] = None
 ) -> str:
+    """
+    Returns a human-readable label showing time since last save.
+    """
     current_time = current_time or QDateTime.currentDateTime()
     minutes = last_save_time.secsTo(current_time) // 60
     if minutes == 0:

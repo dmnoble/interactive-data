@@ -1,6 +1,17 @@
-from PyQt5.QtCore import QSortFilterProxyModel, Qt
-from asteval import Interpreter
 import operator
+import logging
+from typing import Optional, Any
+
+from PyQt5.QtCore import (
+    QSortFilterProxyModel,
+    Qt,
+    QModelIndex,
+    pyqtSignal,
+)
+from asteval import Interpreter
+
+logger = logging.getLogger(__name__)
+
 
 OPS = {
     "==": operator.eq,
@@ -15,16 +26,22 @@ OPS = {
 class TableFilterProxyModel(QSortFilterProxyModel):
 
     RAW_VALUE_ROLE = Qt.UserRole + 1
+    searchTextChanged = pyqtSignal(str)
+    customExprChanged = pyqtSignal(str)
+    structuredFilterChanged = pyqtSignal(dict)
+    sortKeyChanged = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.asteval_engine = Interpreter()
-        self.search_text = ""
-        self.case_sensitive = False
-        self.custom_expr = ""
-        self.structured_filter = {"field": "", "operator": "", "value": ""}
-        self.custom_sort_key = ""
-        self.sort_key_cache = {}  # stores sort key results per row
+        self.search_text: str = ""
+        self.case_sensitive: bool = False
+        self.custom_expr: str = ""
+        self.structured_filter: Optional[dict] = None
+        self.custom_sort_key: str = ""
+        self.sort_key_cache: dict[int, Any] = (
+            {}
+        )  # stores sort key results per row
 
         self.base_symbols = {
             "len": len,
@@ -38,77 +55,96 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             "round": round,
         }
 
-    def set_search_text(self, text):
+    def set_filter_text(self, text: str) -> None:
         self.search_text = text
         self.invalidateFilter()
         self.layoutChanged.emit()
+        self.searchTextChanged.emit(text)
 
-    def set_case_sensitive(self, enabled):
+    def set_custom_filter_expression(self, expr: str) -> None:
+        self.custom_expr = expr.strip()
+        self.invalidateFilter()
+        self.layoutChanged.emit()
+        self.customExprChanged.emit(self.custom_expr)
+
+    def set_case_sensitive(self, enabled: bool) -> None:
         self.case_sensitive = enabled
         self.invalidateFilter()
         self.layoutChanged.emit()
 
-    def set_custom_sort_key(self, expr):
+    def set_custom_sort_key(self, expr: str) -> None:
         self.custom_sort_key = expr.strip()
         self.sort_key_cache.clear()
+        self.sortKeyChanged.emit(self.custom_sort_key)
 
         model = self.sourceModel()
         if model is None:
             return
 
-        for row_index, row_data in enumerate(model._raw_data):
+        headers = getattr(model, "_headers", [])
+        for row_index in range(model.rowCount()):
+            row_data = {
+                header: model.data(
+                    model.index(row_index, col), self.RAW_VALUE_ROLE
+                )
+                for col, header in enumerate(headers)
+            }
             try:
                 scope = {**self.base_symbols, **row_data}
-                result = self.asteval_engine(self.custom_sort_key, scope)
+                self.asteval_engine.symtable.clear()
+                self.asteval_engine.symtable.update(scope)
+                result = self.asteval_engine(self.custom_sort_key)
             except Exception:
                 result = "ERROR"
-            model._raw_data[row_index]["sort_key"] = result
+            # Optionally, store the result in a cache or handle as needed
+            self.sort_key_cache[row_index] = result
 
         model.layoutChanged.emit()
         self.invalidate()
 
-    def filterAcceptsRow(self, source_row, source_parent):
+    def filterAcceptsRow(
+        self, source_row: int, source_parent: QModelIndex
+    ) -> bool:
         model = self.sourceModel()
+        if model is None:
+            return False
 
         # Simple text search handling
         if self.search_text and not self.custom_expr:
-            column_count = model.columnCount()
-            match_found = False
-            for col in range(column_count):
+            for col in range(model.columnCount()):
                 index = model.index(source_row, col)
                 data = model.data(index, Qt.DisplayRole)
                 if data is None:
                     continue
                 text = str(data)
-                if self.case_sensitive:
-                    if self.search_text in text:
-                        match_found = True
-                        break
-                else:
-                    if self.search_text.lower() in text.lower():
-                        match_found = True
-                        break
-            if not match_found:
-                return False
+                if self.case_sensitive and self.search_text in text:
+                    return True
+                elif (
+                    not self.case_sensitive
+                    and self.search_text.lower() in text.lower()
+                ):
+                    return True
+            return False
 
-        # Step 2: custom expression
+        # custom expression
         if self.custom_expr:
             try:
-                row_dict = {}
-                headers = model._headers
-                for col_index, header in enumerate(headers):
-                    index = model.index(source_row, col_index)
-                    value = model.data(index, self.RAW_VALUE_ROLE)
-                    row_dict[header] = value
+                headers = getattr(model, "_headers", [])
+                row_dict = {
+                    header: model.data(
+                        model.index(source_row, i), self.RAW_VALUE_ROLE
+                    )
+                    for i, header in enumerate(headers)
+                }
 
-                expr = self.custom_expr
                 if not self.case_sensitive:
-                    # Lowercase everything for comparison if case-insensitive
                     row_dict = {
                         k: v.lower() if isinstance(v, str) else v
                         for k, v in row_dict.items()
                     }
-                    expr = expr.lower()
+                    expr = self.custom_expr.lower()
+                else:
+                    expr = self.custom_expr
 
                 self.asteval_engine.symtable.clear()
                 self.asteval_engine.symtable.update(row_dict)
@@ -121,7 +157,9 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                 return False
         return True
 
-    def set_structured_filter(self, field, operator_, value):
+    def set_structured_filter(
+        self, field: str, operator_: str, value: str
+    ) -> None:
         if field and operator_ and value:
             self.structured_filter = {
                 "field": field.strip(),
@@ -132,16 +170,16 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             self.structured_filter = None
         self.invalidateFilter()
         self.layoutChanged.emit()
+        if self.structured_filter:
+            self.structuredFilterChanged.emit(self.structured_filter)
 
-    def set_custom_filter_expression(self, expr):
-        self.custom_expr = expr.strip()
+    def clear_structured_filter(self) -> None:
+        self.structured_filter = None
         self.invalidateFilter()
         self.layoutChanged.emit()
 
-    def lessThan(self, left, right):
+    def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
         model = self.sourceModel()
-        left_val = model.data(left, model.RAW_VALUE_ROLE)
-        right_val = model.data(right, model.RAW_VALUE_ROLE)
 
         if self.custom_sort_key:
             val_left = self.sort_key_cache.get(left.row(), "")
@@ -149,31 +187,32 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             try:
                 return val_left < val_right
             except SyntaxError as e:
-                print(f"Custom filter syntax error: {e}")
-                print(f"Expression was: {self.custom_sort_key}")
+                logger.warning(f"Custom filter syntax error: {e}")
+                logger.warning(f"Expression was: {self.custom_sort_key}")
                 return False
             except Exception as e:
-                print(f"Custom filter evaluation error: {e}")
+                logger.warning(f"Custom filter evaluation error: {e}")
                 return False
 
+        left_val = model.data(left, self.RAW_VALUE_ROLE)
+        right_val = model.data(right, self.RAW_VALUE_ROLE)
         try:
             return left_val < right_val
         except Exception:
             return False
 
-    def rebuild_sort_key_cache(self):
+    def rebuild_sort_key_cache(self) -> None:
         self.sort_key_cache.clear()
         model = self.sourceModel()
         if not model:
             return
 
-        headers = model._headers
+        headers = getattr(model, "_headers", [])
         for row in range(model.rowCount()):
-            row_dict = {}
-            for col_index, header in enumerate(headers):
-                index = model.index(row, col_index)
-                value = model.data(index, self.RAW_VALUE_ROLE)
-                row_dict[header] = value
+            row_dict = {
+                header: model.data(model.index(row, i), self.RAW_VALUE_ROLE)
+                for i, header in enumerate(headers)
+            }
 
             if self.custom_sort_key:
                 try:
@@ -182,16 +221,17 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                     self.asteval_engine.symtable.update(self.base_symbols)
                     # 🛠 Then inject row fields
                     self.asteval_engine.symtable.update(row_dict)
+                    val = ""
                     try:
                         val = self.asteval_engine(self.custom_sort_key)
                     except SyntaxError as e:
-                        print(f"Custom filter syntax error: {e}")
-                        print(f"Expression was: {self.custom_sort_key}")
-                        return False
+                        logger.warning(f"Custom filter syntax error: {e}")
+                        logger.warning(
+                            f"Expression was: {self.custom_sort_key}"
+                        )
                     except Exception as e:
-                        print(f"Custom filter evaluation error: {e}")
-                        return False
+                        logger.warning(f"Custom filter evaluation error: {e}")
                     self.sort_key_cache[row] = val
                 except Exception as e:
-                    print(f"Sort key error at row {row}: {e}")
+                    logger.warning(f"Sort key error at row {row}: {e}")
                     self.sort_key_cache[row] = ""
