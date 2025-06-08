@@ -8,16 +8,20 @@ from data_manager import DataManager
 from table_model import DataTableModel
 from config_manager import ConfigManager
 from view_config_service import ViewConfigService
+from PyQt5.QtCore import pyqtSignal, QObject
 
 logger = logging.getLogger(__name__)
 
 
-class WorkspaceController:
+class WorkspaceController(QObject):
     # Directory to store user configs
     CONFIG_DIR = Path("config_profiles")
     CONFIG_END = "_config.json"
+    profileNameChanged = pyqtSignal(str)
 
     def __init__(self) -> None:
+        super().__init__()
+        # existing fields...
         self.profile_name: str = ""
         self.data_manager = DataManager()
         self.config: Optional[ConfigManager] = None
@@ -42,12 +46,14 @@ class WorkspaceController:
 
     def load_profile(self, new_profile_name: str) -> Optional[ConfigManager]:
         if new_profile_name == self.profile_name:
-            return None
+            return self.config
 
         if self.profile_name:
             self.check_dirty_and_save()
 
         self.profile_name = new_profile_name
+        self.profileNameChanged.emit(self.profile_name)
+
         self.config_path = (
             self.CONFIG_DIR / f"{self.profile_name}{self.CONFIG_END}"
         )

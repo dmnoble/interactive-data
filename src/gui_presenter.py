@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 class GuiPresenter:
     def __init__(self, controller: WorkspaceController, gui: BuildGui) -> None:
         self.controller = controller
+        self.gui = gui
         self.proxy_model = TableFilterProxyModel()
         self.model = None
-        self.gui = gui
 
         self.setup_table_view()
         self.set_auto_saves()
@@ -42,7 +42,15 @@ class GuiPresenter:
         # Generate self.model but requires elements initiated
         # along with populated theme and profile selectors
         self.on_profile_changed()
+        self.setup_bindings()
         self.connect_signals()
+
+    def setup_bindings(self):
+        # When controller profile name changes → update profile_selector
+        self.controller.profileNameChanged.connect(self.select_profile_in_gui)
+
+        # When proxy model sort key changes → update custom_sort_input text
+        self.proxy_model.sortKeyChanged.connect(self.update_sort_key)
 
     def set_auto_saves(self):
         # Autosave timer
@@ -86,7 +94,7 @@ class GuiPresenter:
             lambda: self.gui.setPalette(self.apply_theme())
         )
 
-        # Connect apply custom sort button
+        # When Apply Sort button clicked → apply sort and update GUI input
         self.gui.apply_sort_button.clicked.connect(self.apply_custom_sort)
 
         # Connect clear filter button
@@ -132,9 +140,18 @@ class GuiPresenter:
         undo_shortcut.activated.connect(self.controller.undo)
         redo_shortcut.activated.connect(self.controller.redo)
 
+    def update_sort_key(self, sort_key: str) -> None:
+        line_edit = self.gui.custom_sort_input.lineEdit()
+        line_edit.setPlaceholderText(sort_key)
+
     def update_save_label(self) -> None:
         text = get_save_time_label_text(self.last_save_time)
         self.gui.update_save_label(text)
+
+    def select_profile_in_gui(self, profile_name: str):
+        index = self.gui.profile_selector.findText(profile_name)
+        if index != -1:
+            self.gui.profile_selector.setCurrentIndex(index)
 
     def on_profile_changed(self) -> None:
         current_profile = self.gui.profile_selector.currentText()
