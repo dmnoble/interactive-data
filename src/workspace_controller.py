@@ -2,8 +2,9 @@
 
 from pathlib import Path
 import logging
-from typing import Optional, cast
+from typing import Optional, Any, Dict, cast
 import os
+
 from data_manager import DataManager
 from table_model import DataTableModel
 from config_manager import ConfigManager
@@ -18,13 +19,16 @@ class WorkspaceController(QObject):
     CONFIG_DIR = Path("config_profiles")
     CONFIG_END = "_config.json"
     profileNameChanged = pyqtSignal(str)
+    viewNameChanged = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
         # existing fields...
         self.profile_name: str = ""
+        self.view_name: str = ""
         self.data_manager = DataManager()
-        self.config: Optional[ConfigManager] = None
+        self.profile_config: Optional[ConfigManager] = None
+        self.view_config: Optional[Dict[str, Any]] = None
         self.model: Optional[DataTableModel] = None
 
     @property
@@ -33,9 +37,16 @@ class WorkspaceController(QObject):
         return cast(DataTableModel, self.model)
 
     @property
-    def require_config(self) -> ConfigManager:
-        assert self.config is not None, "Config must be loaded before use"
-        return cast(ConfigManager, self.config)
+    def require_view_config(self) -> Dict[str, Any]:
+        assert self.view_config is not None, "Config must be loaded before use"
+        return cast(Dict[str, Any], self.view_config)
+
+    @property
+    def require_profile_config(self) -> ConfigManager:
+        assert (
+            self.profile_config is not None
+        ), "Config must be loaded before use"
+        return cast(ConfigManager, self.profile_config)
 
     def undo(self) -> None:
         """Undo the last action in the model."""
@@ -44,23 +55,38 @@ class WorkspaceController(QObject):
     def redo(self) -> None:
         self.require_model.redo()
 
-    def load_profile(self, new_profile_name: str) -> Optional[ConfigManager]:
+    def create_profile(self, profile_name: str) -> bool:
+        """
+        Create a new profile config and associated empty data file.
+        Returns True if profile was created, False if it already existed.
+        """
+        existing = profile_name in self.get_profiles()
+        if existing:
+            return False
+
+        # Create default config and empty data file
+        self.load_profile(profile_name)
+        self.data_manager.save_data([], profile_name)
+        return True
+
+    def load_profile(self, new_profile_name: str) -> None:
+        if not new_profile_name:
+            return
         if new_profile_name == self.profile_name:
-            return self.config
+            return
 
         if self.profile_name:
             self.check_dirty_and_save()
 
         self.profile_name = new_profile_name
-        self.profileNameChanged.emit(self.profile_name)
 
         self.config_path = (
             self.CONFIG_DIR / f"{self.profile_name}{self.CONFIG_END}"
         )
-        self.config = ConfigManager(self.config_path)
+        self.profile_config = ConfigManager(self.config_path)
 
         logger.info(f"Loaded profile: {self.profile_name}")
-        return self.config
+        self.profileNameChanged.emit(self.profile_name)
 
     def load_data(self, proxy_model) -> tuple[DataTableModel, list]:
         # Load real data from DataManager
@@ -75,7 +101,7 @@ class WorkspaceController(QObject):
             headers,
             data_manager=self.data_manager,
             proxy_model=proxy_model,
-            dark_mode=self.require_config.is_dark_mode(),
+            dark_mode=self.require_profile_config.is_dark_mode(),
         )
         return self.model, headers
 
@@ -108,9 +134,6 @@ class WorkspaceController(QObject):
         custom_expr: str,
         case_sensitive: bool,
         sort_column: int,
-        field: str,
-        operator: str,
-        value: str,
         sort_key: str,
         ascending: bool,
     ) -> None:
@@ -122,15 +145,12 @@ class WorkspaceController(QObject):
             "case_sensitive": case_sensitive,
             "sort_column": (sort_column),
             "ascending": ascending,
-            "filter": {
-                "field": field,
-                "operator": operator,
-                "value": value,
-            },
             "custom_filter": custom_expr,
             "custom_sort_key": sort_key,
         }
         ViewConfigService.save_view(name, config, self.profile_name)
+        self.view_name = name
+        self.viewNameChanged.emit(name)
 
     def set_default_view(self, view_name: str) -> None:
         """Mark the given view as default for this profile."""
@@ -139,19 +159,21 @@ class WorkspaceController(QObject):
     def get_default_view(self):
         return ViewConfigService.get_default(self.profile_name)
 
-    def load_view_config(self, view_name: str) -> tuple[Optional[dict], int]:
-        config = ViewConfigService.load_view(view_name, self.profile_name)
+    def load_view_config(self, view_name: str) -> None:
+        if self.view_name == view_name:
+            return
+        self.view_config = ViewConfigService.load_view(
+            view_name, self.profile_name
+        )
 
-        if not config:  # If no config found, return None
-            return None, 0
+        if not self.view_config:  # If no config found, return None
+            return
 
-        self.require_model.update_sort_column_from_cache()
-        sort_column = self.require_model.columnCount() - 1
-
-        return config, sort_column
+        self.view_name = view_name
+        self.viewNameChanged.emit(view_name)
 
     def save_theme_to_config(self, is_dark):
-        self.require_config.set_theme("Dark" if is_dark else "Light")
+        self.require_profile_config.set_theme("Dark" if is_dark else "Light")
         self.require_model.set_dark_mode(is_dark)
 
     def apply_custom_sort(self, sort_key_cache) -> list:
@@ -186,7 +208,7 @@ class WorkspaceController(QObject):
                     break
         return sample_value
 
-    def get_profiles(self):
+    def get_profiles(self) -> list[str]:
         """Returns a list of available profiles based on config files."""
         if not os.path.exists(self.CONFIG_DIR):
             os.makedirs(self.CONFIG_DIR)
@@ -204,28 +226,15 @@ class WorkspaceController(QObject):
         """Get the default view name for the current profile."""
         return ViewConfigService.get_default(self.profile_name)
 
-    def create_profile(self, profile_name: str) -> bool:
-        """
-        Create a new profile config and associated empty data file.
-        Returns True if profile was created, False if it already existed.
-        """
-        existing = profile_name in self.get_profiles()
-        if existing:
-            return False
-
-        # Create default config and empty data file
-        self.load_profile(profile_name)
-        self.data_manager.save_data([], profile_name)
-        return True
-
-    def get_structured_filter_field(self) -> str:
-        if not self.config:
-            return ""
-        filter_cfg = self.config.config.get("filter", {})
-        return filter_cfg.get("field", "")
-
     def get_custom_filter(self) -> str:
-        if not self.config:
-            return ""
-        filter_cfg = self.config.config.get("filter", {})
-        return filter_cfg.get("field", "")
+        filter_cfg = self.require_view_config.get("custom_filter", "")
+        return filter_cfg.strip()
+
+    def get_custom_sort(self) -> str:
+        return self.require_view_config.get("custom_sort_key", "").strip()
+
+    def get_filter_case_sensitive(self) -> bool:
+        return self.require_view_config.get("case_sensitive", False)
+
+    def get_sort_order(self) -> bool:
+        return self.require_view_config.get("ascending", True)

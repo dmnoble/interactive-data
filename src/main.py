@@ -21,7 +21,7 @@
 """
 
 import sys
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMessageBox, QTableView
 from gui import BuildGui
 from gui_presenter import GuiPresenter
 from workspace_controller import WorkspaceController
@@ -44,8 +44,10 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Ensure consistent style across OSes
 
-    main_window = BuildGui()
+    # Data table view
+    table_view: QTableView = QTableView()
+    main_window = BuildGui(table_view)
     controller = WorkspaceController()
-    presenter = GuiPresenter(controller, main_window)
+    presenter = GuiPresenter(controller, main_window, table_view)
     main_window.show()
     sys.exit(app.exec_())

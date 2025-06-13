@@ -5,11 +5,6 @@
     "case_sensitive": false,
     "sort_column": 4,
     "ascending": false,
-    "filter": {
-      "field": "title",
-      "operator": "contains",
-      "value": ""
-    },
     "custom_filter": "",
     "custom_sort_key": "title",
     "default": true
@@ -20,11 +15,6 @@
     "case_sensitive": false,
     "sort_column": 4,
     "ascending": true,
-    "filter": {
-      "field": "title",
-      "operator": "contains",
-      "value": ""
-    },
     "custom_filter": "",
     "custom_sort_key": "len(description)"
   }

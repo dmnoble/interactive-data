@@ -1,6 +1,6 @@
 import operator
 import logging
-from typing import Optional, Any
+from typing import Any
 
 from PyQt5.QtCore import (
     QSortFilterProxyModel,
@@ -26,9 +26,8 @@ OPS = {
 class TableFilterProxyModel(QSortFilterProxyModel):
 
     RAW_VALUE_ROLE = Qt.UserRole + 1
-    searchTextChanged = pyqtSignal(str)
-    customExprChanged = pyqtSignal(str)
-    structuredFilterChanged = pyqtSignal(dict)
+    filterCaseChanged = pyqtSignal(bool)
+    filterExprChanged = pyqtSignal(str)
     sortKeyChanged = pyqtSignal(str)
 
     def __init__(self) -> None:
@@ -36,8 +35,7 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         self.asteval_engine = Interpreter()
         self.search_text: str = ""
         self.case_sensitive: bool = False
-        self.custom_expr: str = ""
-        self.structured_filter: Optional[dict] = None
+        self.filter_expr: str = ""
         self.custom_sort_key: str = ""
         self.sort_key_cache: dict[int, Any] = (
             {}
@@ -55,25 +53,28 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             "round": round,
         }
 
-    def set_filter_text(self, text: str) -> None:
-        self.search_text = text
+    def set_filter_expression(self, expr: str) -> None:
+        expr = expr.strip()
+        if self.filter_expr == expr:
+            return
+        self.filter_expr = expr
         self.invalidateFilter()
         self.layoutChanged.emit()
-        self.searchTextChanged.emit(text)
-
-    def set_custom_filter_expression(self, expr: str) -> None:
-        self.custom_expr = expr.strip()
-        self.invalidateFilter()
-        self.layoutChanged.emit()
-        self.customExprChanged.emit(self.custom_expr)
+        self.filterExprChanged.emit(self.filter_expr)
 
     def set_case_sensitive(self, enabled: bool) -> None:
+        if self.case_sensitive == enabled:
+            return
         self.case_sensitive = enabled
         self.invalidateFilter()
         self.layoutChanged.emit()
+        self.filterCaseChanged.emit(enabled)
 
     def set_custom_sort_key(self, expr: str) -> None:
-        self.custom_sort_key = expr.strip()
+        expr = expr.strip()
+        if self.custom_sort_key == expr:
+            return
+        self.custom_sort_key = expr
         self.sort_key_cache.clear()
         self.sortKeyChanged.emit(self.custom_sort_key)
 
@@ -101,6 +102,7 @@ class TableFilterProxyModel(QSortFilterProxyModel):
 
         model.layoutChanged.emit()
         self.invalidate()
+        self.rebuild_sort_key_cache()
 
     def filterAcceptsRow(
         self, source_row: int, source_parent: QModelIndex
@@ -109,25 +111,27 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         if model is None:
             return False
 
-        # Simple text search handling
-        if self.search_text and not self.custom_expr:
+        # Set search text ONLY if expression is a simple word
+        if self.filter_expr and (
+            self.filter_expr.isdigit() or self.filter_expr.isalpha()
+        ):
             for col in range(model.columnCount()):
                 index = model.index(source_row, col)
                 data = model.data(index, Qt.DisplayRole)
                 if data is None:
                     continue
                 text = str(data)
-                if self.case_sensitive and self.search_text in text:
+                if self.case_sensitive and self.filter_expr in text:
                     return True
                 elif (
                     not self.case_sensitive
-                    and self.search_text.lower() in text.lower()
+                    and self.filter_expr.lower() in text.lower()
                 ):
                     return True
             return False
 
         # custom expression
-        if self.custom_expr:
+        else:
             try:
                 headers = getattr(model, "_headers", [])
                 row_dict = {
@@ -142,9 +146,9 @@ class TableFilterProxyModel(QSortFilterProxyModel):
                         k: v.lower() if isinstance(v, str) else v
                         for k, v in row_dict.items()
                     }
-                    expr = self.custom_expr.lower()
+                    expr = self.filter_expr.lower()
                 else:
-                    expr = self.custom_expr
+                    expr = self.filter_expr
 
                 self.asteval_engine.symtable.clear()
                 self.asteval_engine.symtable.update(row_dict)
@@ -156,27 +160,6 @@ class TableFilterProxyModel(QSortFilterProxyModel):
             except Exception:
                 return False
         return True
-
-    def set_structured_filter(
-        self, field: str, operator_: str, value: str
-    ) -> None:
-        if field and operator_ and value:
-            self.structured_filter = {
-                "field": field.strip(),
-                "operator": operator_.strip(),
-                "value": value.strip(),
-            }
-        else:
-            self.structured_filter = None
-        self.invalidateFilter()
-        self.layoutChanged.emit()
-        if self.structured_filter:
-            self.structuredFilterChanged.emit(self.structured_filter)
-
-    def clear_structured_filter(self) -> None:
-        self.structured_filter = None
-        self.invalidateFilter()
-        self.layoutChanged.emit()
 
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
         model = self.sourceModel()

@@ -14,8 +14,6 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QTableView,
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPalette, QColor
 
 from version import __version__
 
@@ -28,12 +26,14 @@ class BuildGui(QMainWindow):
     (profiles) & data configurations.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, table_view: QTableView) -> None:
         super().__init__()
         self.setWindowTitle("Interactive Data Workspace")
 
         self._init_ui()
-        self._apply_ui()
+        self._apply_ui(table_view)
+        self.set_filter_defaults()
+        self.set_sort_defaults()
 
         # Connect custom expression help button
         self.custom_expr_help_button.clicked.connect(
@@ -51,9 +51,6 @@ class BuildGui(QMainWindow):
         self.profile_label = QLabel("Select Profile:")
         self.profile_selector = QComboBox()
         self.add_profile_button = QPushButton("Add Profile")
-
-        # Data table view
-        self.table_view: QTableView = QTableView()
 
         # Theme
         self.theme_label = QLabel("Select Theme:")
@@ -83,9 +80,6 @@ class BuildGui(QMainWindow):
         self.case_checkbox: QCheckBox = QCheckBox("Case Sensitive")
         self.operator_selector.addItems(["==", "!=", ">", "<", ">=", "<="])
         self.value_input.setPlaceholderText("Value")
-        self.custom_filter_input.setPlaceholderText(
-            "Custom Filter Expression (e.g. status == 'active')"
-        )
         self.structured_ok_button = QPushButton("OK")
         self.clear_filter_button = QPushButton("Clear")
         self.custom_expr_help_button = QPushButton("?")
@@ -95,9 +89,6 @@ class BuildGui(QMainWindow):
         self.custom_sort_input: QComboBox = QComboBox()
         self.custom_sort_input.setEditable(True)
         self.custom_sort_input.setInsertPolicy(QComboBox.InsertAtTop)
-        line_edit = self.custom_sort_input.lineEdit()
-        placeholder = "Enter Custom Sort Key (e.g. len(name) + priority)"
-        line_edit.setPlaceholderText(placeholder)
         self.sort_order_selector: QComboBox = QComboBox()
         self.sort_order_selector.addItems(["Asc", "Desc"])
         self.sort_label = QLabel("Sort: ")
@@ -109,7 +100,7 @@ class BuildGui(QMainWindow):
         self.save_label = QLabel("Last saved: just now")
         self.version_label = QLabel(f"v{__version__} running")
 
-    def _apply_ui(self) -> None:
+    def _apply_ui(self, table_view: QTableView) -> None:
         # Main widget
         self.main_layout = QVBoxLayout()
         self.central_widget.setLayout(self.main_layout)
@@ -123,7 +114,7 @@ class BuildGui(QMainWindow):
         self.main_layout.addLayout(profile_layout)
 
         # Data table view
-        self.main_layout.addWidget(self.table_view)
+        self.main_layout.addWidget(table_view)
 
         # Theme
         theme_layout = QHBoxLayout()
@@ -181,34 +172,6 @@ class BuildGui(QMainWindow):
         footer_layout.addStretch()  # Push label to the left or right
         self.main_layout.addLayout(footer_layout)
 
-    def update_save_label(self, text) -> None:
-        self.save_label.setText(text)
-
-    def apply_theme(self) -> QPalette:
-        """
-        Applies the current user's theme settings.
-        """
-        is_dark = self.theme_selector.currentText() == "Dark"
-
-        if is_dark:
-            palette = QPalette()
-            palette.setColor(QPalette.Window, QColor(53, 53, 53))
-            palette.setColor(QPalette.WindowText, Qt.white)
-            palette.setColor(QPalette.Base, QColor(25, 25, 25))
-            palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-            palette.setColor(QPalette.ToolTipBase, Qt.black)
-            palette.setColor(QPalette.ToolTipText, Qt.white)
-            palette.setColor(QPalette.Text, Qt.white)
-            palette.setColor(QPalette.Button, QColor(53, 53, 53))
-            palette.setColor(QPalette.ButtonText, Qt.white)
-            palette.setColor(QPalette.BrightText, Qt.red)
-            palette.setColor(QPalette.Link, QColor(42, 130, 218))
-            palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-            palette.setColor(QPalette.HighlightedText, Qt.black)
-            return palette
-        else:
-            return QPalette()  # Reset to default light theme
-
     def update_filter_operators(self, sample_value) -> None:
         self.operator_selector.clear()
 
@@ -244,11 +207,11 @@ class BuildGui(QMainWindow):
 
         match operator:
             case "contains":
-                expr = f"{clean_value} in {field}"
+                expr = f"{value} in {field}"
             case "not":
-                expr = f"{clean_value} not in {field}"
+                expr = f"{value} not in {field}"
             case "matches":
-                expr = f"{clean_value} in {field}"
+                expr = f"{value} in {field}"
             case "startswith":
                 expr = f"{field}.startswith({value})"
             case "endswith":
@@ -320,9 +283,15 @@ class BuildGui(QMainWindow):
 
     def set_filter_defaults(self) -> None:
         self.custom_filter_input.clear()
+        self.custom_filter_input.setPlaceholderText(
+            "Custom Filter Expression (e.g. status == 'active')"
+        )
 
     def set_sort_defaults(self) -> None:
         self.custom_sort_input.setCurrentText("")
+        line_edit = self.custom_sort_input.lineEdit()
+        placeholder = "Enter Custom Sort Key (e.g. len(name) + priority)"
+        line_edit.setPlaceholderText(placeholder)
         self.sort_order_selector.setCurrentText("Asc")
 
     def refresh_view_selector(
@@ -339,12 +308,12 @@ class BuildGui(QMainWindow):
         # Ensure the current selection stays highlighted
         self.set_view_selector(f"{default_name} (default)")
 
-    def update_profile_list(self, profiles: list[str]) -> None:
-        """
-        Refresh the profile list from existing config files.
-        """
-        self.profile_selector.clear()
-        self.profile_selector.addItems(profiles)
+    # def update_profile_list(self, profiles: list[str]) -> None:
+    #     """
+    #     Refresh the profile list from existing config files.
+    #     """
+    #     self.profile_selector.clear()
+    #     self.profile_selector.addItems(profiles)
 
     def update_undo_redo_history(
         self, undo_stack: list, redo_stack: list
@@ -356,21 +325,7 @@ class BuildGui(QMainWindow):
         for action in reversed(redo_stack):
             self.redo_history_combo.addItem(action.description())
 
-    def load_selected_view(self, config: dict) -> None:
-        # TODO: self.custom_filter_input.setText(config.get("search_text", ""))
-        self.custom_filter_input.setText(config.get("custom_filter", ""))
-        self.case_checkbox.setChecked(config.get("case_sensitive", False))
-
-        filter_config = config.get("filter", {})
-        self.operator_selector.setCurrentText(
-            filter_config.get("operator", "==")
-        )
-        self.field_selector.setCurrentText(filter_config.get("field", ""))
-        self.value_input.setText(filter_config.get("value", ""))
-
-        self.sort_order_selector.setCurrentText(
-            "Asc" if config.get("ascending", True) else "Desc"
-        )
-        self.custom_sort_input.setCurrentText(
-            config.get("custom_sort_key", "")
-        )
+    # def closeEvent(self, event) -> None:
+    #     self.controller.auto_backup_if_needed()
+    #     self.controller.check_dirty_and_save()
+    #     event.accept()
