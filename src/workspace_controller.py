@@ -5,11 +5,13 @@ import logging
 from typing import Optional, Any, Dict, cast
 import os
 
+from filter_proxy import TableFilterProxyModel
 from data_manager import DataManager
 from table_model import DataTableModel
 from config_manager import ConfigManager
 from view_config_service import ViewConfigService
 from PyQt5.QtCore import pyqtSignal, QObject
+from sort_cache_helper import SortCacheHelper  # Add this import
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,9 @@ class WorkspaceController(QObject):
         self.profile_config: Optional[ConfigManager] = None
         self.view_config: Optional[Dict[str, Any]] = None
         self.model: Optional[DataTableModel] = None
+        self._proxy_model: Optional[TableFilterProxyModel] = (
+            TableFilterProxyModel()
+        )
 
     @property
     def require_model(self) -> DataTableModel:
@@ -47,6 +52,20 @@ class WorkspaceController(QObject):
             self.profile_config is not None
         ), "Config must be loaded before use"
         return cast(ConfigManager, self.profile_config)
+
+    @property
+    def proxy_model(self) -> TableFilterProxyModel:
+        assert self._proxy_model is not None, "Proxy model not initialized"
+        return self._proxy_model
+
+    def set_model(self, model: DataTableModel) -> None:
+        self._model = model
+        self.proxy_model.setSourceModel(self._model)
+
+    def closeEvent(self, event) -> None:
+        self.auto_backup_if_needed()
+        self.check_dirty_and_save()
+        event.accept()
 
     def undo(self) -> None:
         """Undo the last action in the model."""
@@ -141,7 +160,6 @@ class WorkspaceController(QObject):
 
         config = {
             "name": name,
-            "filter_text": custom_expr,
             "case_sensitive": case_sensitive,
             "sort_column": (sort_column),
             "ascending": ascending,
@@ -182,6 +200,11 @@ class WorkspaceController(QObject):
             for row_idx, sort_value in sort_key_cache.items():
                 if 0 <= row_idx < len(self.model._data):
                     self.model._data[row_idx][-1] = str(sort_value)
+
+        SortCacheHelper.apply_sort_cache_to_model(
+            model=self.require_model,
+            sort_key_cache=self.proxy_model.sort_key_cache,
+        )
 
         # ✅ Visually apply saved sort direction (fallback)
         headers = self.require_model._headers

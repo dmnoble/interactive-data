@@ -53,13 +53,31 @@
     "custom_sort_key": "len(email)",
     "sort_column": 0,
     "ascending": true,
-    "default": false
+    "default": true
   },
   "Default View: All Active Users": {
     "custom_filter": "id > 0",
     "custom_sort_key": "age",
     "sort_column": 0,
     "ascending": true,
-    "default": true
+    "default": false
+  },
+  "filter id and sort tags": {
+    "name": "filter id and sort tags",
+    "case_sensitive": false,
+    "sort_column": 7,
+    "ascending": true,
+    "custom_filter": "id < 20",
+    "custom_sort_key": "len(tags)",
+    "default": false
+  },
+  "filter id": {
+    "name": "filter id",
+    "case_sensitive": false,
+    "sort_column": 0,
+    "ascending": true,
+    "custom_filter": "id >15",
+    "custom_sort_key": "",
+    "default": false
   }
 }

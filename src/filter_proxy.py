@@ -103,10 +103,14 @@ class TableFilterProxyModel(QSortFilterProxyModel):
         model.layoutChanged.emit()
         self.invalidate()
         self.rebuild_sort_key_cache()
+        self.sortKeyChanged.emit(expr)
 
     def filterAcceptsRow(
         self, source_row: int, source_parent: QModelIndex
     ) -> bool:
+        if not self.filter_expr:
+            return True  # ✅ No expression = show all rows
+
         model = self.sourceModel()
         if model is None:
             return False

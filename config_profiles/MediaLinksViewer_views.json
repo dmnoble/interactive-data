@@ -1,7 +1,6 @@
 {
   "title-desc": {
     "name": "title-desc",
-    "filter_text": "",
     "case_sensitive": false,
     "sort_column": 4,
     "ascending": false,
@@ -11,7 +10,6 @@
   },
   "len-description": {
     "name": "len-description",
-    "filter_text": "",
     "case_sensitive": false,
     "sort_column": 4,
     "ascending": true,

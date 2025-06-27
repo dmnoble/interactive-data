@@ -61,3 +61,12 @@ def set_default_view(view_name: str, profile_name: str = "default") -> None:
     config_path = get_config_path(profile_name)
     with config_path.open("w", encoding="utf-8") as f:
         json.dump(views, f, indent=2)
+
+
+def delete_view(view_name: str, profile_name: str = "default") -> None:
+    views = load_all_views(profile_name)
+    if view_name in views:
+        del views[view_name]
+        config_path = get_config_path(profile_name)
+        with config_path.open("w", encoding="utf-8") as f:
+            json.dump(views, f, indent=2)

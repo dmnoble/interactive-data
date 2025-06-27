@@ -1,4 +1,3 @@
-from filter_proxy import TableFilterProxyModel
 from workspace_controller import WorkspaceController
 from gui import BuildGui
 from utils import get_save_time_label_text
@@ -28,7 +27,6 @@ class GuiPresenter:
     ) -> None:
         self.controller = controller
         self.gui = gui
-        self.proxy_model = TableFilterProxyModel()
 
         self.setup_table_view(table_view)
         self.set_auto_saves()
@@ -42,14 +40,9 @@ class GuiPresenter:
         else:
             self.gui.profile_selector.addItems(self.controller.get_profiles())
 
-    # def closeEvent(self, event) -> None:
-    #     self.controller.auto_backup_if_needed()
-    #     self.controller.check_dirty_and_save()
-    #     event.accept()
-
     def setup_table_view(self, table_view: QTableView):
         self.table_view: QTableView = table_view
-        self.table_view.setModel(self.proxy_model)
+        self.table_view.setModel(self.controller.proxy_model)
         self.table_view.setItemDelegate(RichTextDelegate())
         self.table_view.setSortingEnabled(True)
         self.table_view.setWordWrap(False)
@@ -87,11 +80,13 @@ class GuiPresenter:
 
         self.controller.viewNameChanged.connect(self.on_view_changed)
 
-        self.proxy_model.sortKeyChanged.connect(self.apply_sort_key)
+        self.controller.proxy_model.sortKeyChanged.connect(self.apply_sort_key)
 
-        self.proxy_model.filterExprChanged.connect(self.apply_filter_expr)
+        self.controller.proxy_model.filterExprChanged.connect(
+            self.apply_filter_expr
+        )
 
-        self.proxy_model.filterCaseChanged.connect(
+        self.controller.proxy_model.filterCaseChanged.connect(
             lambda state: self.gui.case_checkbox.setChecked(state)
         )
 
@@ -100,15 +95,15 @@ class GuiPresenter:
             "Asc" if self.controller.get_sort_order() else "Desc"
         )
         # Filter
-        self.proxy_model.set_case_sensitive(
+        self.controller.proxy_model.set_case_sensitive(
             self.controller.get_filter_case_sensitive()
         )
         filter_text: str = self.controller.get_custom_filter()
-        self.proxy_model.set_filter_expression(filter_text)
+        self.controller.proxy_model.set_filter_expression(filter_text)
         self.update_filter_operators()
         # Sort
         sort_expr = self.controller.get_custom_sort()
-        self.proxy_model.set_custom_sort_key(sort_expr)
+        self.controller.proxy_model.set_custom_sort_key(sort_expr)
 
     def apply_sort_key(self, sort_key: str) -> None:
         if not sort_key or sort_key.startswith("Enter Custom Sort"):
@@ -125,7 +120,7 @@ class GuiPresenter:
 
         # ✅ Visually apply saved sort direction (fallback)
         headers = self.controller.apply_custom_sort(
-            self.proxy_model.sort_key_cache
+            self.controller.proxy_model.sort_key_cache
         )
         sort_column = headers.index("sort key") if "sort key" in headers else 0
 
@@ -145,7 +140,7 @@ class GuiPresenter:
             self.gui.custom_filter_input.setText(expr)
 
         # Reset sort to original order if no sort key is active
-        if not self.proxy_model.custom_sort_key:
+        if not self.controller.proxy_model.custom_sort_key:
             self.table_view.horizontalHeader().setSortIndicator(
                 -1, Qt.AscendingOrder
             )
@@ -160,8 +155,8 @@ class GuiPresenter:
 
         if not self.controller.profile_config:
             return
-        model, headers = self.controller.load_data(self.proxy_model)
-        self.proxy_model.setSourceModel(model)
+        model, headers = self.controller.load_data(self.controller.proxy_model)
+        self.controller.set_model(model)
 
         # Connect to model update
         model.stack_changed.connect(
@@ -185,9 +180,6 @@ class GuiPresenter:
         # Give Qt a moment to measure based on the new delegate rendering
         QTimer.singleShot(0, self.table_view.resizeColumnsToContents)
 
-        # self.table_view.setWordWrap(False)
-        # self.table_view.setTextElideMode(Qt.ElideRight)
-
         self.update_save_label()
 
         self.gui.theme_selector.setCurrentText(
@@ -208,8 +200,8 @@ class GuiPresenter:
         if default_view:
             self.controller.load_view_config(default_view)
         else:
-            self.proxy_model.set_filter_expression("")
-            self.proxy_model.set_custom_sort_key("")
+            self.controller.proxy_model.set_filter_expression("")
+            self.controller.proxy_model.set_custom_sort_key("")
 
         # Clear history dropdowns
         self.gui.undo_history_combo.clear()
@@ -262,7 +254,9 @@ class GuiPresenter:
 
         # View loader dropdown
         self.gui.view_selector.activated[str].connect(
-            lambda view_name: self.controller.load_view_config(view_name)
+            lambda view_name: self.controller.load_view_config(
+                view_name.replace(" (default)", "")
+            )
         )
 
         # Default view button
@@ -276,28 +270,34 @@ class GuiPresenter:
             self.apply_structured_filter
         )
         self.gui.custom_filter_input.textChanged.connect(
-            lambda: self.proxy_model.set_filter_expression(
-                self.gui.custom_filter_input.text()
+            lambda: (
+                self.controller.proxy_model.set_filter_expression(
+                    self.gui.custom_filter_input.text()
+                )
             )
         )
         self.gui.case_checkbox.stateChanged.connect(
-            lambda state: self.proxy_model.set_case_sensitive(
-                state == Qt.Checked
+            lambda state: (
+                self.controller.proxy_model.set_case_sensitive(
+                    state == Qt.Checked
+                )
             )
         )
         # Connect clear filter button
         self.gui.clear_filter_button.clicked.connect(
-            lambda: self.proxy_model.set_filter_expression("")
+            lambda: (self.controller.proxy_model.set_filter_expression(""))
         )
 
         # Sort
         self.gui.apply_sort_button.clicked.connect(
-            lambda: self.proxy_model.set_custom_sort_key(
-                self.gui.custom_sort_input.currentText()
+            lambda: (
+                self.controller.proxy_model.set_custom_sort_key(
+                    self.gui.custom_sort_input.currentText()
+                )
             )
         )
         self.gui.clear_sort_button.clicked.connect(
-            lambda: self.proxy_model.set_custom_sort_key("")
+            lambda: (self.controller.proxy_model.set_custom_sort_key(""))
         )
 
         # Undo redo
@@ -316,13 +316,13 @@ class GuiPresenter:
 
     def update_filter_operators(self) -> None:
         field = self.gui.field_selector.currentText()
-        role = self.proxy_model.RAW_VALUE_ROLE
+        role = self.controller.proxy_model.RAW_VALUE_ROLE
         sample_value = self.controller.update_filter_operators(field, role)
         self.gui.update_filter_operators(sample_value)
 
     def apply_structured_filter(self) -> None:
         self.gui.on_apply_structured_filter()
-        self.proxy_model.set_filter_expression(
+        self.controller.proxy_model.set_filter_expression(
             self.gui.custom_filter_input.text()
         )
 
@@ -361,20 +361,30 @@ class GuiPresenter:
         if dialog.exec_():
             name = dialog.textValue()
             if name:
+                self.gui.view_selector.blockSignals(
+                    True
+                )  # avoid accidental trigger
                 sort_column = (
                     self.table_view.horizontalHeader().sortIndicatorSection()
                 )
                 self.controller.save_current_view(
                     name=name,
-                    custom_expr=self.proxy_model.filter_expr,
-                    case_sensitive=self.proxy_model.case_sensitive,
+                    custom_expr=self.controller.proxy_model.filter_expr,
+                    case_sensitive=(
+                        self.controller.proxy_model.case_sensitive
+                    ),
                     sort_column=sort_column,
-                    sort_key=self.proxy_model.custom_sort_key,
+                    sort_key=self.controller.proxy_model.custom_sort_key,
                     ascending=(
                         self.gui.sort_order_selector.currentText() == "Asc"
                     ),
                 )
+                self.gui.view_selector.clear()
+                self.gui.view_selector.addItems(
+                    self.controller.get_all_view_names()
+                )
                 self.gui.set_view_selector(name)
+                self.gui.view_selector.blockSignals(False)
 
     def on_set_default_view(self) -> None:
         view_name = self.gui.get_current_view_name().replace(" (default)", "")
