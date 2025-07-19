@@ -4,6 +4,7 @@ import pytest
 from PyQt5.QtWidgets import QApplication
 from src.logger import setup_logger
 
+
 # Ensure src/ is on the path so imports like `from logger import` work
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))

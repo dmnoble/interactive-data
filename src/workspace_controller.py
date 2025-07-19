@@ -59,8 +59,8 @@ class WorkspaceController(QObject):
         return self._proxy_model
 
     def set_model(self, model: DataTableModel) -> None:
-        self._model = model
-        self.proxy_model.setSourceModel(self._model)
+        self.model = model
+        self.proxy_model.setSourceModel(self.model)
 
     def closeEvent(self, event) -> None:
         self.auto_backup_if_needed()
