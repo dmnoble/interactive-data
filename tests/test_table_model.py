@@ -1,5 +1,5 @@
-from src.table_model import DataTableModel
-from src.undo_redo import Action
+from src.models.table_model import DataTableModel
+from src.controllers.undo_redo import Action
 from unittest.mock import Mock, patch
 from PyQt5.QtCore import Qt
 import os
@@ -122,8 +122,8 @@ def test_update_sort_column_from_cache():
 
 
 @patch.dict(os.environ, {"IDW_TEST_MODE": "1"})
-@patch("src.table_model.DataTableModel.load_undo_stack_from_file")
-@patch("src.table_model.DataTableModel.replay_undo_stack")
+@patch("src.models.table_model.DataTableModel.load_undo_stack_from_file")
+@patch("src.models.table_model.DataTableModel.replay_undo_stack")
 def test_recovery_mode_triggers_replay(load_mock, replay_mock, tmp_path):
     undo_path = tmp_path / ".undo_log.json"
     undo_path.write_text("{}")

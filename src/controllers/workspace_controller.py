@@ -5,13 +5,13 @@ import logging
 from typing import Optional, Any, Dict, cast
 import os
 
-from filter_proxy import TableFilterProxyModel
-from data_manager import DataManager
-from table_model import DataTableModel
-from config_manager import ConfigManager
-from view_config_service import ViewConfigService
+from models.filter_proxy import TableFilterProxyModel
+from services.data_manager import DataManager
+from models.table_model import DataTableModel
+from services.config_manager import ConfigManager
+from services.view_config_service import ViewConfigService
 from PyQt5.QtCore import pyqtSignal, QObject
-from sort_cache_helper import SortCacheHelper  # Add this import
+from services.sort_cache_helper import SortCacheHelper  # Add this import
 
 logger = logging.getLogger(__name__)
 

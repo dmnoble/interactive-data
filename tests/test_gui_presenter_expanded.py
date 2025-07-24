@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from PyQt5.QtWidgets import QTableView
 from PyQt5.QtCore import QObject, pyqtSignal, Qt
-from src.gui_presenter import GuiPresenter
+from src.controllers.gui_presenter import GuiPresenter
 from PyQt5.QtCore import QAbstractTableModel
 
 
@@ -146,7 +146,9 @@ def patch_qshortcut(monkeypatch):
             super().__init__()  # no parent → simple, safe
             _registry.append(self)  # 👈 prevent GC
 
-    monkeypatch.setattr("src.gui_presenter.QShortcut", DummyShortcut)
+    monkeypatch.setattr(
+        "src.controllers.gui_presenter.QShortcut", DummyShortcut
+    )
 
 
 def test_init_sets_up_table_view_and_profiles(gui_presenter, gui_mock):
@@ -230,7 +232,7 @@ def test_on_save_current_view_calls_controller(
     controller_mock.save_current_view = mock_save_current_view
 
     # Full patch of QInputDialog so instantiation is avoided entirely
-    with patch("src.gui_presenter.QInputDialog") as mock_dialog:
+    with patch("src.controllers.gui_presenter.QInputDialog") as mock_dialog:
         instance = mock_dialog.return_value
         instance.exec_.return_value = True
         instance.textValue.return_value = (

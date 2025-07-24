@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-from view_config import (
+from models.view_config import (
     save_view_config,
     get_view_config,
     set_default_view,

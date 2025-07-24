@@ -1,5 +1,5 @@
-from src.table_model import DataTableModel
-from src.undo_redo import Action
+from src.models.table_model import DataTableModel
+from src.controllers.undo_redo import Action
 import pytest
 from pathlib import Path
 

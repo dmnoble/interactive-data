@@ -1,10 +1,10 @@
-from workspace_controller import WorkspaceController
-from gui import BuildGui
-from utils import get_save_time_label_text
+from controllers.workspace_controller import WorkspaceController
+from gui.main_window import BuildGui
+from utils.utils import get_save_time_label_text
 
 import logging
 import sys
-from rich_text_delegate import RichTextDelegate
+from gui.widgets.rich_text_delegate import RichTextDelegate
 from PyQt5.QtWidgets import (
     QTableView,
     QShortcut,

@@ -1,4 +1,4 @@
-from src.utils import format_date, multi_sort
+from src.utils.utils import format_date, multi_sort
 
 
 def test_format_date():

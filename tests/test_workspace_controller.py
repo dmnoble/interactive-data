@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock
-from src.workspace_controller import WorkspaceController
+from src.controllers.workspace_controller import WorkspaceController
 from PyQt5.QtCore import Qt, QAbstractTableModel
 
 

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from src.sort_cache_helper import SortCacheHelper
+from src.services.sort_cache_helper import SortCacheHelper
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 

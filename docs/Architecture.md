@@ -4,7 +4,7 @@
 
 This document outlines the architecture of the **Interactive Data App**, including diagrams to visualize class relationships, module dependencies, and actual import flows. These diagrams are auto-generated to reflect the current code structure.
 
-_Last updated: {{DATE}}_
+_Last updated: Mar 03 2025_
 
 ---
 

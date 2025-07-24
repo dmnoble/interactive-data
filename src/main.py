@@ -11,7 +11,7 @@
 - Configuration for data input page
 
 # FIXME:
-- Sample data RewatchScheduler Alice view doesn't work
+- Sample data RewatchScheduler Alice view doesn't highlight
 - View selector doesn't update when view is changed
 - Sort expression "len(description)" sometimes crashes
 - Incorrect sort key causes None values; Apply Sort doesn't work
@@ -22,10 +22,10 @@
 
 import sys
 from PyQt5.QtWidgets import QApplication, QMessageBox, QTableView
-from gui import BuildGui
-from gui_presenter import GuiPresenter
-from workspace_controller import WorkspaceController
-from logger import setup_logger
+from gui.main_window import BuildGui
+from controllers.gui_presenter import GuiPresenter
+from controllers.workspace_controller import WorkspaceController
+from logs.logger import setup_logger
 
 
 logger = setup_logger("main")

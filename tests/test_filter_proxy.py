@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel
-from src.filter_proxy import TableFilterProxyModel
+from src.models.filter_proxy import TableFilterProxyModel
 
 
 class DummyModel(QAbstractTableModel):

@@ -2,7 +2,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, mock_open
-from src.data_manager import DataManager, CONFIG_DIR
+from src.services.data_manager import DataManager, CONFIG_DIR
 
 TEST_DATA_PATH = "test_sample_data.json"
 
@@ -37,40 +37,42 @@ def test_get_config_path():
     assert path == CONFIG_DIR / "example_data.json"
 
 
-@patch("src.data_manager.Path.exists", return_value=False)
+@patch("src.services.data_manager.Path.exists", return_value=False)
 def test_load_data_returns_empty_if_missing(mock_exists):
     dm = DataManager()
     assert dm.load_data("ghost") == []
 
 
 @patch(
-    "src.data_manager.Path.open", new_callable=mock_open, read_data="INVALID"
+    "src.services.data_manager.Path.open",
+    new_callable=mock_open,
+    read_data="INVALID",
 )
-@patch("src.data_manager.Path.exists", return_value=True)
+@patch("src.services.data_manager.Path.exists", return_value=True)
 def test_load_data_handles_corrupt_json(mock_exists, mock_file):
     dm = DataManager()
     assert dm.load_data("badfile") == []
 
 
 @patch(
-    "src.data_manager.Path.open",
+    "src.services.data_manager.Path.open",
     new_callable=mock_open,
     read_data='[{"id": 1}]',
 )
-@patch("src.data_manager.Path.exists", return_value=True)
+@patch("src.services.data_manager.Path.exists", return_value=True)
 def test_load_data_valid(mock_exists, mock_file):
     dm = DataManager()
     assert dm.load_data("ok") == [{"id": 1}]
 
 
-@patch("src.data_manager.Path.open", new_callable=mock_open)
+@patch("src.services.data_manager.Path.open", new_callable=mock_open)
 def test_save_data_succeeds(mock_file, sample_data):
     dm = DataManager()
     dm.save_data(sample_data, "goodfile")
     mock_file.assert_called_once()
 
 
-@patch("src.data_manager.Path.open", side_effect=IOError("fail"))
+@patch("src.services.data_manager.Path.open", side_effect=IOError("fail"))
 def test_save_data_retries_then_fails(mock_file, sample_data):
     dm = DataManager()
     with pytest.raises(IOError):
@@ -88,9 +90,14 @@ def test_save_backup_creates_file(sample_data):
         backup_path = temp_backup_dir / filename
 
         # Patch constants and time
-        with patch("src.data_manager.BACKUP_DIR", temp_backup_dir), patch(
-            "src.data_manager.time.strftime", return_value="20250709-070707"
-        ), patch("src.data_manager.Path.open", mock_open()) as mock_file:
+        with patch(
+            "src.services.data_manager.BACKUP_DIR", temp_backup_dir
+        ), patch(
+            "src.services.data_manager.time.strftime",
+            return_value="20250709-070707",
+        ), patch(
+            "src.services.data_manager.Path.open", mock_open()
+        ) as mock_file:
 
             dm.save_backup(sample_data, profile)
 

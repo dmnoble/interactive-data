@@ -1,7 +1,7 @@
 import pytest
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableView
-from src.gui import BuildGui
+from src.gui.main_window import BuildGui
 
 
 @pytest.fixture

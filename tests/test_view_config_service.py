@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from src.view_config_service import ViewConfigService
+from src.services.view_config_service import ViewConfigService
 
 
 @pytest.fixture
