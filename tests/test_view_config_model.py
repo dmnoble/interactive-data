@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-import src.models.view_config as vc
+import src.models.view_config_model as vc
 
 
 @pytest.fixture

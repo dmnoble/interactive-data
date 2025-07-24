@@ -1,5 +1,5 @@
 """
-Pytest version of tests for src.config_manager.ConfigManager
+Pytest version of tests for src.config_service.ConfigManager
 """
 
 from pathlib import Path
@@ -7,7 +7,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.services.config_manager import ConfigManager
+from src.services.config_service import ConfigManager
 
 
 # ---------- fixtures ------------------------------------------------------- #
@@ -31,7 +31,7 @@ def mock_config_path(tmp_path: Path) -> Path:
 def test_load_returns_default_if_file_missing(
     mock_config_path, default_config
 ):
-    with patch("src.services.config_manager.Path.exists", return_value=False):
+    with patch("src.services.config_service.Path.exists", return_value=False):
         cm = ConfigManager(mock_config_path)
     assert cm.config == default_config
 
@@ -39,8 +39,8 @@ def test_load_returns_default_if_file_missing(
 def test_load_corrupt_json_returns_default(mock_config_path, default_config):
     m_open = mock_open(read_data="INVALID JSON")
     with patch(
-        "src.services.config_manager.Path.exists", return_value=True
-    ), patch("src.services.config_manager.Path.open", m_open):
+        "src.services.config_service.Path.exists", return_value=True
+    ), patch("src.services.config_service.Path.open", m_open):
         cm = ConfigManager(mock_config_path)
 
     assert cm.config == default_config
@@ -50,8 +50,8 @@ def test_save_writes_file(mock_config_path):
     m_open = mock_open()
     # First instantiation should *not* find the file
     with patch(
-        "src.services.config_manager.Path.exists", return_value=False
-    ), patch("src.services.config_manager.Path.open", m_open):
+        "src.services.config_service.Path.exists", return_value=False
+    ), patch("src.services.config_service.Path.open", m_open):
         cm = ConfigManager(mock_config_path)
         cm.save()
 

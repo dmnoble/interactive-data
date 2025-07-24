@@ -2,7 +2,7 @@ import sys
 import os
 import pytest
 from PyQt5.QtWidgets import QApplication
-from src.logs.logger import setup_logger
+from src.logger.log_utils import setup_logger
 
 
 # Ensure src/ is on the path so imports like `from logger import` work

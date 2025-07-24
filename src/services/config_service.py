@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from logs.logger import setup_logger
+from logger.log_utils import setup_logger
 
 
 class ConfigManager:

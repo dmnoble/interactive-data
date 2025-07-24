@@ -23,9 +23,9 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMessageBox, QTableView
 from gui.main_window import BuildGui
-from controllers.gui_presenter import GuiPresenter
+from controllers.app_controller import GuiPresenter
 from controllers.workspace_controller import WorkspaceController
-from logs.logger import setup_logger
+from logger.log_utils import setup_logger
 
 
 logger = setup_logger("main")

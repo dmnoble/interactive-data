@@ -1,6 +1,6 @@
 import json
-from src.models.table_model import DataTableModel
-from src.controllers.undo_redo import Action
+from src.models.data_table_model import DataTableModel
+from src.controllers.undo_controller import Action
 
 
 def test_unsaved_stack_written_correctly(tmp_path):

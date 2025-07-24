@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Optional
-from controllers.undo_redo import Action
+from controllers.undo_controller import Action
 from PyQt5.QtWidgets import QMessageBox
 import os
 

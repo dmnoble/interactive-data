@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 import time
-from logs.logger import setup_logger
+from logger.log_utils import setup_logger
 from typing import List
 
 logger = setup_logger("data_manager")

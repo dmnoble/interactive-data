@@ -1,6 +1,6 @@
 from controllers.workspace_controller import WorkspaceController
 from gui.main_window import BuildGui
-from utils.utils import get_save_time_label_text
+from utils.helpers import get_save_time_label_text
 
 import logging
 import sys
